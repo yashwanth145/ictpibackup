@@ -260,7 +260,7 @@ export default function Dashboard() {
                         <div className="bg-white/25 backdrop-blur-sm rounded-lg p-2 min-w-[165px] snap-center border border-white/40 flex-shrink-0">
                           <div className="text-[10px] opacity-90 leading-tight">CTPr RPL Batch 16(OCT/2025)</div>
                           <div className="font-bold text-xs mt-0.5">ID:3570359</div>
-                          <div className="text-[10px] mt-0.5 flex items-center gap-1"><Clock className="w-3 h-3" />04:00PM - 5:30PM</div>
+                          <div className="text-[10px] mt-0.5 flex items-center gap-1"><Clock className="w-3 h-3" />06:45PM - 7:45PM</div>
                         </div>
                       </div>
                     </div>
