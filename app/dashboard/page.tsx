@@ -227,45 +227,9 @@ export default function Dashboard() {
 
               <div className="flex flex-col sm:flex-row gap-3 text-sm w-full">
                 {/* MEPSC ASSESSMENT */}
-                <div className="relative group flex-shrink-0">
-                  <Link href="/schedule">
-                    <div className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg transition-all hover:scale-105 cursor-pointer text-center text-xs leading-tight">
-                      <div className="tracking-wider">MEPSC ASSESSMENT</div>
-                      <div className="text-[11px]">STARTS FROM TOMORROW</div>
-                      <div className="text-[10px] opacity-90">Check Exam Schedule</div>
-                    </div>
-                  </Link>
-                </div>
+                
 
-                {/* ZOOM VIVA SCHEDULE - FIXED FOR MOBILE */}
-                <div className="relative group flex-1 min-w-0">
-                  <Link href="/schedule">
-                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold px-3 py-3 rounded-xl shadow-lg transition-all hover:scale-105 cursor-pointer">
-                      <div className="text-xs font-extrabold tracking-wider mb-2">ZOOM VIVA</div>
-                      <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 snap-x snap-mandatory">
-                        {/* Batch 1 */}
-                        <div className="bg-white/25 backdrop-blur-sm rounded-lg p-2 min-w-[165px] snap-center border border-white/40 flex-shrink-0">
-                          <div className="text-[10px] opacity-90 leading-tight">CTPr RPL Batch 14</div>
-                                                    <div className="text-[10px] opacity-90 leading-tight">Date-OCT/2025</div>
-                          <div className="font-bold text-xs mt-0.5">ID: 3567806</div>
-                          <div className="text-[10px] mt-0.5 flex items-center gap-1"><Clock className="w-3 h-3" />9:00AM - 10:00AM</div>
-                        </div>
-                        {/* Batch 2 */}
-                        <div className="bg-white/25 backdrop-blur-sm rounded-lg p-3 min-w-[165px] snap-center border border-white/40 flex-shrink-0">
-                          <div className="text-[10px] opacity-90 leading-tight">CTPr RPL Batch 15 (OCT/2025)</div>
-                          <div className="font-bold text-xs mt-0.5">ID: 3568263</div>
-                          <div className="text-[10px] mt-0.5 flex items-center gap-1"><Clock className="w-3 h-3" />2:00PM - 03:30PM</div>
-                        </div>
-                        {/* Batch 3 */}
-                        <div className="bg-white/25 backdrop-blur-sm rounded-lg p-2 min-w-[165px] snap-center border border-white/40 flex-shrink-0">
-                          <div className="text-[10px] opacity-90 leading-tight">CTPr RPL Batch 16(OCT/2025)</div>
-                          <div className="font-bold text-xs mt-0.5">ID:3570359</div>
-                          <div className="text-[10px] mt-0.5 flex items-center gap-1"><Clock className="w-3 h-3" />06:45PM - 7:45PM</div>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                </div>
+                
               </div>
             </div>
 
