@@ -243,24 +243,7 @@ export default function PreviousSessions() {
           </div>
 
 
-          {/* Beautiful MEPSC Assessment Announcement */}
-              <div className="relative group">
-                <Link href="/schedule">
-                  <div className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-sm md:text-base px-5 py-3 rounded-xl shadow-2xl transition-all transform hover:scale-105 hover:shadow-3xl cursor-pointer animate-pulse flex flex-col items-center leading-tight">
-                    <span className="tracking-wider">MEPSC ASSESSMENT</span>
-                    <span className="tracking-wider">STARTS FROM TOMORROW</span>
-                    <span className="text-xs mt-1 opacity-90">Search your schedule from Exam Schedule</span>
-                  </div>
-                </Link>
-
-                {/* Tooltip */}
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300 z-10">
-                  <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-4 whitespace-nowrap shadow-2xl">
-                    Click to view Exam Schedule
-                  </div>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-8 border-transparent border-b-gray-900"></div>
-                </div>
-              </div>
+            
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 bg-gray-50 px-3 py-2 rounded-lg">

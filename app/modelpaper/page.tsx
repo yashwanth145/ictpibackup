@@ -1,7 +1,7 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -17,19 +17,17 @@ import {
   Eye,
   Download,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import logo from "../../assets/ICTPL_image.png";
 import emailNamePairs from "../../public/names.json";
 import { createClient } from "@supabase/supabase-js";
-import { format, addMinutes, isWithinInterval } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { format } from "date-fns";
 
-// Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Email → Name Map
 const emailToName = new Map<string, string>();
 Object.entries(emailNamePairs as Record<string, string>).forEach(
   ([email, name]) => emailToName.set(email.toLowerCase(), name)
@@ -49,6 +47,11 @@ interface ModelPaper {
   downloadName: string;
 }
 
+interface HtmlTest {
+  title: string;
+  src: string;
+}
+
 export default function ModelPaperPage() {
   const auth = useAuth() as any;
   const router = useRouter();
@@ -57,34 +60,105 @@ export default function ModelPaperPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [liveNow, setLiveNow] = useState(false);
   const [nearestFutureSession, setNearestFutureSession] = useState<Session | null>(null);
+
   const [showModal, setShowModal] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [selectedPaper, setSelectedPaper] = useState<ModelPaper | null>(null);
+  const [selectedHtmlTest, setSelectedHtmlTest] = useState<HtmlTest | null>(null);
+  const [isTestActive, setIsTestActive] = useState(false);
+  const [unfairExit, setUnfairExit] = useState(false);
 
-  // Multiple Model Papers
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+
   const modelPapers: ModelPaper[] = [
-    {
-      title: "MEPSC Model Question Paper 2025 - 01",
-      src: "/pdf/modelpaper.pdf",
-      downloadName: "MEPSC_Model_Paper_2025.pdf",
-    },
-    {
-      title: "MEPSC Model Question Paper 2025 - 02",
-      src: "/pdf/modelpaper2.pdf",
-      downloadName: "MEPSC_Model_Paper_2025_2.pdf",
-    },
+    { title: "MEPSC Model Question Paper 2025 - 01", src: "/pdf/modelpaper.pdf", downloadName: "MEPSC_Model_Paper_2025.pdf" },
+    { title: "MEPSC Model Question Paper 2025 - 02", src: "/pdf/modelpaper2.pdf", downloadName: "MEPSC_Model_Paper_2025_2.pdf" },
   ];
 
-  // Live session logic
+  const htmlTests: HtmlTest[] = [
+    { title: "01.1_INDIRECT_TAXES_GST", src: "/tests/01.1_INDIRECT_TAXES_GST.html" },
+    { title: "01.2 INDIRECT_CUSTOMS", src: "/tests/01.2 INDIRECT_CUSTOMS.html" },
+    { title: "02.1_Advising on Setup up a Business", src: "/tests/02.1_Advising on Setup up a Business.html" },
+    { title: "02.2_Appendix", src: "/tests/02.2_Appendix.html" },
+    { title: "02.3_Business_Maintenance", src: "/tests/02.3_Business_Maintenance.html" },
+    { title: "02.4_Close_Business", src: "/tests/02.4_Close_Business.html" },
+    { title: "4.0 Penalties_Assessment_Amendments_Combined_Quiz", src: "/tests/4.0 Penalties_Assessment_Amendments_Combined_Quiz.html" },
+    { title: "4.1 Income_Tax_Combined_Quiz_v1", src: "/tests/4.1 Income_Tax_Combined_Quiz_v1.html" },
+    { title: "4.2 Advanced_Taxation_Combined_Quiz_v1", src: "/tests/4.2 Advanced_Taxation_Combined_Quiz_v1.html" },
+    { title: "4.3 Corporate_Taxation_Combined_Quiz_v1", src: "/tests/4.3 Corporate_Taxation_Combined_Quiz_v1.html" },
+    { title: "4.4 Special_Taxation_Combined_Quiz", src: "/tests/4.4 Special_Taxation_Combined_Quiz.html" },
+    { title: "4.5 Tax_Assessment_and_Special_Topics_Combined_Quiz", src: "/tests/4.5 Tax_Assessment_and_Special_Topics_Combined_Quiz.html" },
+    { title: "5.0 International_Taxation", src: "/tests/5.0 International_Taxation.html" },
+  ];
+
+  const startFullscreenTest = (test: HtmlTest) => {
+    setSelectedHtmlTest(test);
+    setShowModal(true);
+    setIsTestActive(true);
+    setUnfairExit(false);
+
+    setTimeout(() => {
+      fullscreenRef.current?.requestFullscreen?.() ||
+      (fullscreenRef.current as any)?.webkitRequestFullscreen?.() ||
+      (fullscreenRef.current as any)?.msRequestFullscreen?.();
+    }, 100);
+  };
+
+  // Detect ESC / F11 / Alt+Tab / any forceful exit
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (isTestActive && !document.fullscreenElement) {
+        // User exited fullscreen forcefully → show warning
+        setUnfairExit(true);
+        setIsTestActive(false);
+      }
+    };
+
+    const events = ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"];
+    events.forEach(e => document.addEventListener(e, handleFullscreenChange));
+
+    return () => events.forEach(e => document.removeEventListener(e, handleFullscreenChange));
+  }, [isTestActive]);
+
+  // Clean exit via "Exit Test" button (NO warning)
+  const handleCleanExit = () => {
+    document.exitFullscreen?.();
+    setShowModal(false);
+    setSelectedHtmlTest(null);
+    setIsTestActive(false);
+    setUnfairExit(false);
+    router.push("/modelpaper");
+  };
+
+  // Submit test from iframe
+  const handleTestSubmit = () => {
+    document.exitFullscreen?.();
+    setShowModal(false);
+    setSelectedHtmlTest(null);
+    setIsTestActive(false);
+    setUnfairExit(false);
+    router.push("/modelpaper");
+  };
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data === "TEST_SUBMITTED" && isTestActive) {
+        handleTestSubmit();
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [isTestActive]);
+
+  // Live session logic (no date-fns-tz)
   const isSessionLiveNow = (s: Session): boolean => {
-    const now = toZonedTime(new Date(), "Asia/Kolkata");
-    const sessionDT = toZonedTime(
-      new Date(`${s.sessiondate}T${s.sessiontime}`),
-      "Asia/Kolkata"
-    );
-    const start = addMinutes(sessionDT, -5);
-    const end = addMinutes(sessionDT, 60);
-    return isWithinInterval(now, { start, end });
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const nowInIST = new Date(now.getTime() + istOffset);
+    const sessionDateTime = new Date(`${s.sessiondate}T${s.sessiontime}`);
+    const start = new Date(sessionDateTime.getTime() - 5 * 60 * 1000);
+    const end = new Date(sessionDateTime.getTime() + 60 * 60 * 1000);
+    return nowInIST >= start && nowInIST <= end;
   };
 
   useEffect(() => setMounted(true), []);
@@ -100,16 +174,19 @@ export default function ModelPaperPage() {
         );
         setSessions(sorted);
         setLiveNow(sorted.some(isSessionLiveNow));
-        const future = sorted.find(
-          (s) => new Date(`${s.sessiondate}T${s.sessiontime}`) > new Date()
-        );
+
+        const now = new Date();
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const nowInIST = new Date(now.getTime() + istOffset);
+        const future = sorted.find(s => new Date(`${s.sessiondate}T${s.sessiontime}`) > nowInIST);
         setNearestFutureSession(future ?? null);
       }
     };
+
     if (auth?.user) {
       fetchSessions();
       const id = setInterval(fetchSessions, 30_000);
-      return () => clearInterval(id);
+      return () => clearInterval(id); // Fixed
     }
   }, [auth?.user]);
 
@@ -130,9 +207,7 @@ export default function ModelPaperPage() {
       : auth.user?.email?.split("@")[0] || "User";
   };
 
-  const badgeSession = liveNow
-    ? sessions.find(isSessionLiveNow) ?? null
-    : nearestFutureSession;
+  const badgeSession = liveNow ? sessions.find(isSessionLiveNow) ?? null : nearestFutureSession;
 
   if (!mounted || !auth || auth.loading) {
     return (
@@ -156,75 +231,33 @@ export default function ModelPaperPage() {
       `}</style>
 
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-100">
-        {/* Desktop Sidebar - Sticky & Scrollable */}
+        {/* Sidebar & Mobile Nav (unchanged) */}
         <aside className="hidden md:flex w-60 bg-[#0062cc] text-white flex-col h-screen sticky top-0 overflow-y-auto">
-          
-
           <nav className="flex-1 px-4 py-4 space-y-1">
-            <Link
-              href="/dashboard"
-              className={`flex items-center px-4 py-3 rounded-lg transition ${
-                pathname === "/dashboard" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"
-              }`}
-            >
+            <Link href="/dashboard" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/dashboard" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <LayoutDashboard className="w-5 h-5 mr-3" /> Dashboard
             </Link>
-            <Link
-              href="/results"
-              className={`flex items-center px-4 py-3 rounded-lg transition ${
-                pathname === "/results" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"
-              }`}
-            >
+            <Link href="/results" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/results" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <ClipboardList className="w-5 h-5 mr-3" /> Result
             </Link>
-            <Link
-              href="/sessions"
-              className={`flex items-center px-4 py-3 rounded-lg transition ${
-                pathname === "/sessions" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"
-              }`}
-            >
+            <Link href="/sessions" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/sessions" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <ClipboardList className="w-5 h-5 mr-3" /> Sessions
             </Link>
-            <Link
-              href="/previous"
-              className={`flex items-center px-4 py-3 rounded-lg transition ${
-                pathname === "/previous" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"
-              }`}
-            >
+            <Link href="/previous" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/previous" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <History className="w-5 h-5 mr-3" /> Previous Sessions
             </Link>
-            <Link
-              href="/vlogs"
-              className={`flex items-center px-4 py-3 rounded-lg transition ${
-                pathname === "/vlogs" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"
-              }`}
-            >
+            <Link href="/vlogs" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/vlogs" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <ClipboardList className="w-5 h-5 mr-3" /> B/Vlogs
             </Link>
-            <Link
-              href="/schedule"
-              className={`flex items-center px-4 py-3 rounded-lg transition ${
-                pathname === "/schedule" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"
-              }`}
-            >
+            <Link href="/schedule" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/schedule" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <GraduationCap className="w-5 h-5 mr-3" /> Exam schedule
             </Link>
-            <Link
-              href="/modelpaper"
-              className={`flex items-center px-4 py-3 rounded-lg transition ${
-                pathname === "/modelpaper" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"
-              }`}
-            >
+            <Link href="/modelpaper" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/modelpaper" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
             </Link>
           </nav>
-
-          <div className="p-4 border-t border-blue-500">
-            
-          </div>
         </aside>
 
-        {/* Mobile Bottom Nav */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0062cc]/95 backdrop-blur-sm text-white flex justify-around items-center py-2 shadow-lg z-50 text-xs">
           <Link href="/dashboard" className="flex flex-col items-center"><LayoutDashboard className="w-5 h-5 mb-1" /> Dashboard</Link>
           <Link href="/results" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> Results</Link>
@@ -235,26 +268,18 @@ export default function ModelPaperPage() {
           <button onClick={handleSignOut} className="flex flex-col items-center"><LogOut className="w-5 h-5 mb-1" /> Logout</button>
         </nav>
 
-        {/* Main Content */}
         <div className="flex-1 flex flex-col">
-          {/* Header */}
           <header className="flex justify-between items-center bg-white shadow px-4 md:px-6 py-3 sticky top-0 z-40">
             <Image src={logo} alt="Logo" className="h-[60px] w-[60px] md:h-[100px] md:w-[100px]" />
             <div className="flex items-center gap-3 md:gap-5">
               {badgeSession && (
-                <button
-                  onClick={() => setSelectedSession(badgeSession)}
-                  className={`relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white text-xs font-medium transition ${
-                    liveNow ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
-                  }`}
-                >
+                <button onClick={() => setSelectedSession(badgeSession)} className={`relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white text-xs font-medium transition ${liveNow ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}>
                   {liveNow ? (
                     <>
                       <Radio className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">LIVE NOW</span>
                       <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <span className="absolute inline-flex h-6 w-6 rounded-full bg-green-400 opacity-75 animate-ping"></span>
-                        <span className="absolute inline-flex h-5 w-5 rounded-full bg-green-500 opacity-75 animate-ping delay-150"></span>
                       </span>
                     </>
                   ) : (
@@ -265,24 +290,6 @@ export default function ModelPaperPage() {
                   )}
                 </button>
               )}
-
-              {/* MEPSC Assessment Announcement */}
-              <div className="relative group">
-                <Link href="/schedule">
-                  <div className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-sm md:text-base px-5 py-3 rounded-xl shadow-2xl transition-all transform hover:scale-105 hover:shadow-3xl cursor-pointer animate-pulse flex flex-col items-center leading-tight">
-                    <span className="tracking-wider">MEPSC ASSESSMENT</span>
-                    <span className="tracking-wider">STARTS FROM TOMORROW</span>
-                    <span className="text-xs mt-1 opacity-90">Search your schedule from Exam Schedule</span>
-                  </div>
-                </Link>
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300 z-10">
-                  <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-4 whitespace-nowrap shadow-2xl">
-                    Click to view Exam Schedule
-                  </div>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-8 border-transparent border-b-gray-900"></div>
-                </div>
-              </div>
-
               <div className="flex items-center gap-2">
                 <User2 className="w-5 h-5 text-gray-700" />
                 <div className="text-sm text-gray-800 text-right">
@@ -291,54 +298,57 @@ export default function ModelPaperPage() {
                   </div>
                 </div>
               </div>
-
-              <button
-                onClick={handleSignOut}
-                className="hidden md:flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
-              >
+              <button onClick={handleSignOut} className="hidden md:flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
                 <LogOut className="w-5 h-5" /> Sign Out
               </button>
             </div>
           </header>
 
-          {/* Page Content */}
           <main className="flex-1 p-6 md:p-8 bg-gray-100 mb-[80px] md:mb-0">
-            {/* Model Papers Grid */}
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-4xl mx-auto space-y-12">
+              {/* Model Papers */}
               <div className="bg-white rounded-xl shadow-xl overflow-hidden">
                 <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-white">
                   <h2 className="text-2xl md:text-3xl font-bold">Model Question Papers</h2>
                   <p className="text-blue-100 mt-1">Download or view in fullscreen</p>
                 </div>
-
                 <div className="p-8 space-y-6">
-                  {modelPapers.map((paper, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition">
-                      <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                        {paper.title}
-                      </h3>
-
+                  {modelPapers.map((paper, i) => (
+                    <div key={i} className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-4">{paper.title}</h3>
                       <div className="flex flex-col sm:flex-row gap-4">
-                        <button
-                          onClick={() => {
-                            setSelectedPaper(paper);
-                            setShowModal(true);
-                          }}
-                          className="flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-md"
-                        >
-                          <Eye className="w-5 h-5" />
-                          View Fullscreen
+                        <button onClick={() => { setSelectedPaper(paper); setShowModal(true); }} className="flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-md">
+                          <Eye className="w-5 h-5" /> View Fullscreen
                         </button>
-
-                        <a
-                          href={paper.src}
-                          download={paper.downloadName}
-                          className="flex items-center justify-center gap-3 px-6 py-4 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition shadow-md"
-                        >
-                          <Download className="w-5 h-5" />
-                          Download PDF
+                        <a href={paper.src} download={paper.downloadName} className="flex items-center justify-center gap-3 px-6 py-4 bg-green-600 text W-white font-medium rounded-lg hover:bg-green-700 transition shadow-md">
+                          <Download className="w-5 h-5" /> Download PDF
                         </a>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Interactive Mock Tests */}
+              <div className="bg-white rounded-xl shadow-xl overflow-hidden">
+                <div className="bg-gradient-to-r from-purple-600 to-indigo-700 p-6 text-white">
+                  <h2 className="text-2xl md:text-3xl font-bold">Interactive Mock Tests</h2>
+                  <p className="text-purple-100 mt-1">Practice online with real exam interface</p>
+                </div>
+                <div className="p-8 space-y-6">
+                  {htmlTests.map((test, i) => (
+                    <div key={i} className="border border-purple-200 bg-purple-50 rounded-lg p-6 hover:shadow-xl transition">
+                      <h3 className="text-xl font-semibold text-purple-900 mb-4 flex items-center gap-3">
+                        <span className="px-3 py-1 bg-purple-600 text-white rounded-full text-xs font-bold">TEST</span>
+                        {test.title}
+                      </h3>
+                      <button
+                        onClick={() => startFullscreenTest(test)}
+                        className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-lg hover:from-purple-700 hover:to-indigo-700 transition shadow-lg text-lg"
+                      >
+                        <Eye className="w-6 h-6" />
+                        Start Test Fullscreen
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -347,38 +357,87 @@ export default function ModelPaperPage() {
           </main>
         </div>
 
-        {/* Fullscreen PDF Modal */}
-        {showModal && selectedPaper && (
-          <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex flex-col">
-            <div className="bg-gray-800 p-4 flex justify-between items-center text-white">
-              <h3 className="text-lg font-semibold truncate max-w-[70%]">
-                {selectedPaper.title}
+        {/* Fullscreen Modal */}
+        {showModal && (selectedPaper || selectedHtmlTest) && (
+          <div ref={fullscreenRef} className="fixed inset-0 bg-black bg-opacity-90 z-50 flex flex-col">
+            <div className="bg-gray-900 p-4 flex justify-between items-center text-white shadow-2xl">
+              <h3 className="text-lg font-semibold truncate max-w-[60%]">
+                {selectedPaper?.title || selectedHtmlTest?.title}
               </h3>
-              <div className="flex items-center gap-3">
-                <a
-                  href={selectedPaper.src}
-                  download={selectedPaper.downloadName}
-                  className="text-sm bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded flex items-center gap-1"
-                >
-                  <Download className="w-4 h-4" /> Download
-                </a>
-                <button
-                  onClick={() => {
-                    setShowModal(false);
-                    setSelectedPaper(null);
-                  }}
-                  className="p-2 hover:bg-gray-700 rounded-lg transition"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+              <div className="flex items-center gap-4">
+
+                {selectedPaper && (
+                  <a
+                    href={selectedPaper.src}
+                    download={selectedPaper.downloadName}
+                    className="bg-green-600 hover:bg-green-700 px-5 py-2.5 rounded-lg font-medium transition flex items-center gap-2"
+                  >
+                    <Download className="w-5 h-5" /> Download
+                  </a>
+                )}
+
+                {/* Exit Test Button - Clean Exit (No Warning) */}
+                {selectedHtmlTest && (
+                  <button
+                    onClick={handleCleanExit}
+                    className="bg-red-600 hover:bg-red-700 px-7 py-3 rounded-lg font-bold text-white transition shadow-lg flex items-center gap-2 text-lg"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    Exit Test
+                  </button>
+                )}
+
+                {/* Close for PDF */}
+                {selectedPaper && (
+                  <button
+                    onClick={() => {
+                      document.exitFullscreen?.();
+                      setShowModal(false);
+                      setSelectedPaper(null);
+                      router.push("/modelpaper");
+                    }}
+                    className  className="bg-gray-600 hover:bg-gray-700 px-6 py-2.5 rounded-lg font-medium transition flex items-center gap-2"
+                  >
+                    <X className="w-5 h-5" />
+                    Close
+                  </button>
+                )}
               </div>
             </div>
+
             <iframe
-              src={selectedPaper.src}
-              className="flex-1 w-full border-0"
-              title={selectedPaper.title}
+              src={selectedPaper?.src || selectedHtmlTest?.src}
+              className="flex-1 w-full border-0 bg-white"
+              title={selectedPaper?.title || selectedHtmlTest?.title}
               allowFullScreen
+              sandbox="allow-scripts allow-same-origin allow-modals allow-popups allow-forms allow-top-navigation-by-user-activation"
             />
+          </div>
+        )}
+
+        {/* Unfair Exit Warning - Only on ESC/F11 */}
+        {unfairExit && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max W-w-md w-full p-8 text-center animate-fadeIn">
+              <AlertTriangle className="w-20 h-20 text-red-600 mx-auto mb-4" />
+              <h2 className="text-3xl font-bold text-red-700 mb-3">Unfair Practice Detected!</h2>
+              <p className="text-gray-700 text-lg mb-6">
+                You exited fullscreen mode using ESC or F11.<br />
+                This is not allowed in real exams.
+              </p>
+              <button
+                onClick={() => {
+                  setUnfairExit(false);
+                  setShowModal(false);
+                  setSelectedHtmlTest(null);
+                  setIsTestActive(false);
+                  router.push("/modelpaper");
+                }}
+                className="px-8 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition"
+              >
+                Return to Tests
+              </button>
+            </div>
           </div>
         )}
 
@@ -407,12 +466,7 @@ export default function ModelPaperPage() {
                 <p><strong>Date:</strong> {format(new Date(selectedSession.sessiondate), "dd MMM yyyy")}</p>
                 <p><strong>Time:</strong> {format(new Date(`1970-01-01T${selectedSession.sessiontime}`), "hh:mm a")}</p>
               </div>
-              <a
-                href={selectedSession.sessionlink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full bg-[#0062cc] text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition text-center block"
-              >
+              <a href={selectedSession.sessionlink} target="_blank" rel="noopener noreferrer" className="w-full bg-[#0062cc] text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition text-center block">
                 Join Google Meet
               </a>
             </div>

@@ -171,13 +171,7 @@ export default function MemberSearchPage() {
           <Image src={logo} alt="Logo" className="h-[60px] w-[60px] md:h-[100px] md:w-[100px]" />
           {/* Beautiful MEPSC Assessment Announcement */}
               <div className="relative group">
-                <Link href="/schedule">
-                  <div className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-sm md:text-base px-5 py-3 rounded-xl shadow-2xl transition-all transform hover:scale-105 hover:shadow-3xl cursor-pointer animate-pulse flex flex-col items-center leading-tight">
-                    <span className="tracking-wider">MEPSC ASSESSMENT</span>
-                    <span className="tracking-wider">STARTS FROM TOMORROW</span>
-                    <span className="text-xs mt-1 opacity-90">Search your schedule from Exam Schedule</span>
-                  </div>
-                </Link>
+                
 
                 {/* Tooltip */}
                 <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300 z-10">
