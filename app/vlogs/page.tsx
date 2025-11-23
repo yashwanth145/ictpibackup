@@ -86,7 +86,7 @@ export default function Dashboard() {
             { href: "/vlogs", icon: ClipboardList, label: "B/Vlogs" },
             { href: "/schedule", icon: GraduationCap, label: "Exam Schedule" },
             { href: "/modelpaper", icon: ClipboardPenLine, label: "Model Papers" },
-            { href: "/tests", icon: ClipboardPenLine, label: "Practicing Tests" },
+            { href: "/tests", icon: ClipboardPenLine, label: "Practice Tests" },
           ].map((item) => (
             <Link
               key={item.href}
@@ -175,7 +175,7 @@ export default function Dashboard() {
               { href: "/vlogs", icon: ClipboardList, label: "Vlogs" },
               { href: "/schedule", icon: GraduationCap, label: "Schedule" },
               { href: "/modelpaper", icon: ClipboardPenLine, label: "Papers", },
-              {href:"/tests",icon:ClipboardPenLine,label:"Practicing Tests"},
+              {href:"/tests",icon:ClipboardPenLine,label:"Practice Tests"},
             ].map((item) => (
               <Link
                 key={item.href}

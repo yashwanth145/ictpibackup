@@ -187,7 +187,7 @@ export default function Dashboard() {
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
             </Link>
 <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practicing Tests
+              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
             </Link>
           </nav>
         </aside>
@@ -226,7 +226,7 @@ export default function Dashboard() {
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
             </Link>
                      <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practicing Tests
+              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
             </Link>
           <button onClick={signOut} className="flex flex-col items-center text-xs text-red-600">
             <LogOut className="w-6 h-6" />

@@ -144,7 +144,7 @@ export default function ModelPaperPage() {
             </Link>
             
                       <Link href="/tests" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/tests" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practicing  Tests
+              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice  Tests
             </Link>
 
           </nav>
@@ -157,7 +157,7 @@ export default function ModelPaperPage() {
           <Link href="/previous" className="flex flex-col items-center"><History className="w-5 h-5 mb-1" /> Prev</Link>
           <Link href="/modelpaper" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Papers</Link>
           <Link href="/mocktests" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Tests</Link>
-          <Link href="/tests" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5" /> Practicing test</Link>
+          <Link href="/tests" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5" /> Practice test</Link>
 
           <button onClick={handleSignOut} className="flex flex-col items-center"><LogOut className="w-5 h-5 mb-1" /> Out</button>
         </nav>
