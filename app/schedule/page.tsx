@@ -147,6 +147,9 @@ export default function MemberSearchPage() {
           <Link href="/modelpaper" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
             </Link>
+<Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practicing Tests
+            </Link>
         </nav>
       </aside>
 
@@ -160,6 +163,9 @@ export default function MemberSearchPage() {
         <Link href="/schedule" className="flex flex-col items-center"><GraduationCap className="w-5 h-5 mb-1" /> Exam schedule</Link>
         <Link href="/modelpaper" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
+            </Link>
+ <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practicing Tests
             </Link>
         <button onClick={handleSignOut} className="flex flex-col items-center"><LogOut className="w-5 h-5 mb-1" /> Logout</button>
       </nav>

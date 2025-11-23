@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   LayoutDashboard, History, ClipboardList, GraduationCap,
-  ClipboardPenLine, User2, LogOut, Eye, Download, X, Radio, Circle
+  ClipboardPenLine, User2, LogOut, Eye, X, Radio, Circle, AlertTriangle
 } from "lucide-react";
 import logo from "../../assets/ICTPL_image.png";
 import emailNamePairs from "../../public/names.json";
@@ -24,20 +24,17 @@ Object.entries(emailNamePairs as Record<string, string>).forEach(
 );
 
 interface Session { sessionid: number; sessiontitle: string; sessiondate: string; sessiontime: string; sessionlink: string; }
+interface HtmlTest { title: string; src: string; }
 
-interface ModelPaper {
-  title: string;
-  src: string;
-  downloadName: string;
-}
-
-export default function ModelPaperPage() {
+export default function MockTestsPage() {
   const auth = useAuth() as any;
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [selectedPaper, setSelectedPaper] = useState<ModelPaper | null>(null);
+  const [selectedHtmlTest, setSelectedHtmlTest] = useState<HtmlTest | null>(null);
+  const [isTestActive, setIsTestActive] = useState(false);
+  const [unfairExit, setUnfairExit] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [liveNow, setLiveNow] = useState(false);
   const [nearestFutureSession, setNearestFutureSession] = useState<Session | null>(null);
@@ -45,10 +42,63 @@ export default function ModelPaperPage() {
 
   const fullscreenRef = useRef<HTMLDivElement>(null);
 
-  const modelPapers: ModelPaper[] = [
-    { title: "MEPSC Model Question Paper 2025 - 01", src: "/pdf/modelpaper.pdf", downloadName: "MEPSC_Model_Paper_2025.pdf" },
-    { title: "MEPSC Model Question Paper 2025 - 02", src: "/pdf/modelpaper2.pdf", downloadName: "MEPSC_Model_Paper_2025_2.pdf" },
+  const htmlTests: HtmlTest[] = [
+    { title: "01.1_INDIRECT_TAXES_GST", src: "/tests/01.1_INDIRECT_TAXES_GST.html" },
+    { title: "01.2 INDIRECT_CUSTOMS", src: "/tests/01.2 INDIRECT_CUSTOMS.html" },
+    { title: "02.1_Advising on Setup up a Business", src: "/tests/02.1_Advising on Setup up a Business.html" },
+    { title: "02.2_Appendix", src: "/tests/02.2_Appendix.html" },
+    { title: "02.3_Business_Maintenance", src: "/tests/02.3_Business_Maintenance.html" },
+    { title: "02.4_Close_Business", src: "/tests/02.4_Close_Business.html" },
+    { title: "4.0 Penalties_Assessment_Amendments_Combined_Quiz", src: "/tests/4.0 Penalties_Assessment_Amendments_Combined_Quiz.html" },
+    { title: "4.1 Income_Tax_Combined_Quiz_v1", src: "/tests/4.1 Income_Tax_Combined_Quiz_v1.html" },
+    { title: "4.2 Advanced_Taxation_Combined_Quiz_v1", src: "/tests/4.2 Advanced_Taxation_Combined_Quiz_v1.html" },
+    { title: "4.3 Corporate_Taxation_Combined_Quiz_v1", src: "/tests/4.3 Corporate_Taxation_Combined_Quiz_v1.html" },
+    { title: "4.4 Special_Taxation_Combined_Quiz", src: "/tests/4.4 Special_Taxation_Combined_Quiz.html" },
+    { title: "4.5 Tax_Assessment_and_Special_Topics_Combined_Quiz", src: "/tests/4.5 Tax_Assessment_and_Special_Topics_Combined_Quiz.html" },
+    { title: "5.0 International_Taxation", src: "/tests/5.0 International_Taxation.html" },
   ];
+
+  const startFullscreenTest = (test: HtmlTest) => {
+    setSelectedHtmlTest(test);
+    setShowModal(true);
+    setIsTestActive(true);
+    setUnfairExit(false);
+    setTimeout(() => {
+      fullscreenRef.current?.requestFullscreen?.() ||
+      (fullscreenRef.current as any)?.webkitRequestFullscreen?.() ||
+      (fullscreenRef.current as any)?.msRequestFullscreen?.();
+    }, 100);
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (isTestActive && !document.fullscreenElement) {
+        setUnfairExit(true);
+        setIsTestActive(false);
+      }
+    };
+    const events = ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"];
+    events.forEach(e => document.addEventListener(e, handleFullscreenChange));
+    return () => events.forEach(e => document.removeEventListener(e, handleFullscreenChange));
+  }, [isTestActive]);
+
+  const handleCleanExit = () => {
+    document.exitFullscreen?.();
+    setShowModal(false);
+    setSelectedHtmlTest(null);
+    setIsTestActive(false);
+    setUnfairExit(false);
+  };
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data === "TEST_SUBMITTED" && isTestActive) {
+        handleCleanExit();
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [isTestActive]);
 
   const isSessionLiveNow = (s: Session): boolean => {
     const now = new Date();
@@ -118,7 +168,7 @@ export default function ModelPaperPage() {
       `}</style>
 
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-100">
-        {/* Sidebar & Mobile Nav - Same as original */}
+        {/* Same Sidebar & Mobile Nav */}
         <aside className="hidden md:flex w-60 bg-[#0062cc] text-white flex-col h-screen sticky top-0 overflow-y-auto">
           <nav className="flex-1 px-4 py-4 space-y-1">
             <Link href="/dashboard" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/dashboard" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
@@ -142,9 +192,8 @@ export default function ModelPaperPage() {
             <Link href="/modelpaper" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/modelpaper" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
             </Link>
-            
-                      <Link href="/tests" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/tests" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practicing  Tests
+ <Link href="/tests" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/modelpaper" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
+              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practicing Tests
             </Link>
 
           </nav>
@@ -156,9 +205,7 @@ export default function ModelPaperPage() {
           <Link href="/sessions" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> Sessions</Link>
           <Link href="/previous" className="flex flex-col items-center"><History className="w-5 h-5 mb-1" /> Prev</Link>
           <Link href="/modelpaper" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Papers</Link>
-          <Link href="/mocktests" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Tests</Link>
-          <Link href="/tests" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5" /> Practicing test</Link>
-
+          <Link href="/tests" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Practicing Tests</Link>
           <button onClick={handleSignOut} className="flex flex-col items-center"><LogOut className="w-5 h-5 mb-1" /> Out</button>
         </nav>
 
@@ -199,22 +246,24 @@ export default function ModelPaperPage() {
           <main className="flex-1 p-6 md:p-8 bg-gray-100 mb-[80px] md:mb-0">
             <div className="max-w-4xl mx-auto">
               <div className="bg-white rounded-xl shadow-xl overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-white">
-                  <h2 className="text-2xl md:text-3xl font-bold">Model Question Papers</h2>
-                  <p className="text-blue-100 mt-1">Download or view in fullscreen</p>
+                <div className="bg-gradient-to-r from-purple-600 to-indigo-700 p-6 text-white">
+                  <h2 className="text-2xl md:text-3xl font-bold">Interactive Mock Tests</h2>
+                  <p className="text-purple-100 mt-1">Practice online with real exam interface</p>
                 </div>
                 <div className="p-8 space-y-6">
-                  {modelPapers.map((paper, i) => (
-                    <div key={i} className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition">
-                      <h3 className="text-xl font-semibold text-gray-800 mb-4">{paper.title}</h3>
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <button onClick={() => { setSelectedPaper(paper); setShowModal(true); }} className="flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-md">
-                          <Eye className="w-5 h-5" /> View Fullgall
-                        </button>
-                        <a href={paper.src} download={paper.downloadName} className="flex items-center justify-center gap-3 px-6 py-4 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition shadow-md">
-                          <Download className="w-5 h-5" /> Download PDF
-                        </a>
-                      </div>
+                  {htmlTests.map((test, i) => (
+                    <div key={i} className="border border-purple-200 bg-purple-50 rounded-lg p-6 hover:shadow-xl transition">
+                      <h3 className="text-xl font-semibold text-purple-900 mb-4 flex items-center gap-3">
+                        <span className="px-3 py-1 bg-purple-600 text-white rounded-full text-xs font-bold">TEST</span>
+                        {test.title}
+                      </h3>
+                      <button
+                        onClick={() => startFullscreenTest(test)}
+                        className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-lg hover:from-purple-700 hover:to-indigo-700 transition shadow-lg text-lg"
+                      >
+                        <Eye className="w-6 h-6" />
+                        Start Test Fullscreen
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -223,21 +272,48 @@ export default function ModelPaperPage() {
           </main>
         </div>
 
-        {/* PDF Fullscreen Modal */}
-        {showModal && selectedPaper && (
+        {/* Test Fullscreen Modal */}
+        {showModal && selectedHtmlTest && (
           <div ref={fullscreenRef} className="fixed inset-0 bg-black bg-opacity-90 z-50 flex flex-col">
             <div className="bg-gray-900 p-4 flex justify-between items-center text-white shadow-2xl">
-              <h3 className="text-lg font-semibold truncate max-w-[60%]">{selectedPaper.title}</h3>
-              <div className="flex items-center gap-4">
-                <a href={selectedPaper.src} download={selectedPaper.downloadName} className="bg-green-600 hover:bg-green-700 px-5 py-2.5 rounded-lg font-medium transition flex items-center gap-2">
-                  <Download className="w-5 h-5" /> Download
-                </a>
-                <button onClick={() => { document.exitFullscreen?.(); setShowModal(false); setSelectedPaper(null); }} className="bg-gray-600 hover:bg-gray-700 px-6 py-2.5 rounded-lg font-medium transition flex items-center gap-2">
-                  <X className="w-5 h-5" /> Close
-                </button>
-              </div>
+              <h3 className="text-lg font-semibold truncate max-w-[60%]">{selectedHtmlTest.title}</h3>
+              <button onClick={handleCleanExit} className="bg-red-600 hover:bg-red-700 px-7 py-3 rounded-lg font-bold text-white transition shadow-lg flex items-center gap-2 text-lg">
+                <LogOut className="w-5 h-5" />
+                Exit Test
+              </button>
             </div>
-            <iframe src={selectedPaper.src} className="flex-1 w-full border-0 bg-white" title={selectedPaper.title} allowFullScreen />
+            <iframe
+              src={selectedHtmlTest.src}
+              className="flex-1 w-full border-0 bg-white"
+              title={selectedHtmlTest.title}
+              allowFullScreen
+              sandbox="allow-scripts allow-same-origin allow-modals allow-popups allow-forms allow-top-navigation-by-user-activation"
+            />
+          </div>
+        )}
+
+        {/* Unfair Exit Warning */}
+        {unfairExit && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center animate-fadeIn">
+              <AlertTriangle className="w-20 h-20 text-red-600 mx-auto mb-4" />
+              <h2 className="text-3xl font-bold text-red-700 mb-3">Unfair Practice Detected!</h2>
+              <p className="text-gray-700 text-lg mb-6">
+                You exited fullscreen mode using ESC or F11.<br />
+                This is not allowed in real exams.
+              </p>
+              <button
+                onClick={() => {
+                  setUnfairExit(false);
+                  setShowModal(false);
+                  setSelectedHtmlTest(null);
+                  setIsTestActive(false);
+                }}
+                className="px-8 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition"
+              >
+                Return to Tests
+              </button>
+            </div>
           </div>
         )}
 
