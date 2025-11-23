@@ -396,7 +396,7 @@ export default function ModelPaperPage() {
                       setSelectedPaper(null);
                       router.push("/modelpaper");
                     }}
-                    className  className="bg-gray-600 hover:bg-gray-700 px-6 py-2.5 rounded-lg font-medium transition flex items-center gap-2"
+                    className="bg-gray-600 hover:bg-gray-700 px-6 py-2.5 rounded-lg font-medium transition flex items-center gap-2"
                   >
                     <X className="w-5 h-5" />
                     Close
