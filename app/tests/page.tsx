@@ -247,7 +247,7 @@ export default function MockTestsPage() {
             <div className="max-w-4xl mx-auto">
               <div className="bg-white rounded-xl shadow-xl overflow-hidden">
                 <div className="bg-gradient-to-r from-purple-600 to-indigo-700 p-6 text-white">
-                  <h2 className="text-2xl md:text-3xl font-bold">Interactive Mock Tests</h2>
+                  <h2 className="text-2xl md:text-3xl font-bold">Interactive Practice Tests</h2>
                   <p className="text-purple-100 mt-1">Practice online with real exam interface</p>
                 </div>
                 <div className="p-8 space-y-6">
