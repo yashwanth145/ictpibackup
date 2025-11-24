@@ -55,7 +55,6 @@ export default function MockTestsPage() {
     { title: "4.3 Corporate_Taxation_Combined_Quiz_v1", src: "/tests/4.3 Corporate_Taxation_Combined_Quiz_v1.html" },
     { title: "4.4 Special_Taxation_Combined_Quiz", src: "/tests/4.4 Special_Taxation_Combined_Quiz.html" },
     { title: "4.5 Tax_Assessment_and_Special_Topics_Combined_Quiz", src: "/tests/4.5 Tax_Assessment_and_Special_Topics_Combined_Quiz.html" },
-    { title: "5.0 International_Taxation", src: "/tests/5.0 International_Taxation.html" },
   ];
 
   const startFullscreenTest = (test: HtmlTest) => {
