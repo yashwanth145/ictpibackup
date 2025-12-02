@@ -137,7 +137,7 @@ export default function ModelPaperPage() {
               <ClipboardList className="w-5 h-5 mr-3" /> B/Vlogs
             </Link>
             <Link href="/schedule" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/schedule" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
-              <GraduationCap className="w-5 h-5 mr-3" /> Exam schedule
+              <GraduationCap className="w-5 h-5 mr-3" /> Exam Information
             </Link>
             <Link href="/modelpaper" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/modelpaper" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers

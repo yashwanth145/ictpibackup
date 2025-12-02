@@ -6,7 +6,8 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   LayoutDashboard, History, ClipboardList, GraduationCap,
-  ClipboardPenLine, User2, LogOut, Eye, X, Radio, Circle, AlertTriangle
+  ClipboardPenLine, User2, LogOut, Eye, X, Radio, Circle, AlertTriangle,
+  GraduationCapIcon
 } from "lucide-react";
 import logo from "../../assets/ICTPL_image.png";
 import emailNamePairs from "../../public/names.json";
@@ -186,7 +187,7 @@ export default function MockTestsPage() {
               <ClipboardList className="w-5 h-5 mr-3" /> B/Vlogs
             </Link>
             <Link href="/schedule" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/schedule" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
-              <GraduationCap className="w-5 h-5 mr-3" /> Exam schedule
+              <GraduationCap className="w-5 h-5 mr-3" /> Exam Information
             </Link>
             <Link href="/modelpaper" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/modelpaper" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
@@ -204,6 +205,7 @@ export default function MockTestsPage() {
           <Link href="/sessions" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> Sessions</Link>
           <Link href="/previous" className="flex flex-col items-center"><History className="w-5 h-5 mb-1" /> Prev</Link>
           <Link href="/modelpaper" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Papers</Link>
+          <Link href="/schedule" className="flex flex-col items-center"><GraduationCapIcon className="w-5 h-5 mb-1" /> Exam Information</Link>
           <Link href="/tests" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Practice Tests</Link>
           <button onClick={handleSignOut} className="flex flex-col items-center"><LogOut className="w-5 h-5 mb-1" /> Out</button>
         </nav>

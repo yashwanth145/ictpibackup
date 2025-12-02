@@ -94,7 +94,7 @@ const ResultPage = () => {
             <ClipboardList className="w-5 h-5 mr-3" /> B/Vlogs
           </Link>
           <Link href="/schedule" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-            <GraduationCap className="w-5 h-5 mr-3" /> Exam schedule
+            <GraduationCap className="w-5 h-5 mr-3" /> Exam Information
           </Link>
           <Link href="/modelpaper" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
@@ -124,7 +124,7 @@ const ResultPage = () => {
         </Link>
         
         <Link href="/schedule" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-            <GraduationCap className="w-5 h-5 mr-3" />Exam schedule
+            <GraduationCap className="w-5 h-5 mr-3" />Exam Information
           </Link>
           <Link href="/modelpaper" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers

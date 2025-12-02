@@ -173,7 +173,7 @@ export default function Dashboard() {
               { href: "/sessions", icon: ClipboardList, label: "Sessions" },
               { href: "/previous", icon: History, label: "Prev" },
               { href: "/vlogs", icon: ClipboardList, label: "Vlogs" },
-              { href: "/schedule", icon: GraduationCap, label: "Schedule" },
+              { href: "/schedule", icon: GraduationCap, label: "Exam Information" },
               { href: "/modelpaper", icon: ClipboardPenLine, label: "Papers", },
               {href:"/tests",icon:ClipboardPenLine,label:"Practice Tests"},
             ].map((item) => (
