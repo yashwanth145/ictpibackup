@@ -1,9 +1,23 @@
 "use client";
+
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter} from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard, ClipboardList, User2, LogOut, History, Search, GraduationCap, X ,ClipboardPenLine} from "lucide-react";
+import {
+  LayoutDashboard,
+  ClipboardList,
+  User2,
+  LogOut,
+  History,
+  Search,
+  GraduationCap,
+  X,
+  ClipboardPenLine,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+} from "lucide-react";
 import Image from "next/image";
 import logo from "../../assets/ICTPL_image.png";
 import { supabase } from "@/lib/Supabase";
@@ -35,6 +49,14 @@ interface Candidate {
   batch_id: string | null;
   batch_name: string | null;
   exam_date: string | null;
+
+  // New columns from your SQL
+  mepsc_assesment?: string;
+  next_step?: string;
+  qualification_status?: string;
+  self_test_practice?: string;
+  mock_exam?: string;
+  final_ctpr_exam?: string;
 }
 
 export default function MemberSearchPage() {
@@ -85,16 +107,14 @@ export default function MemberSearchPage() {
     try {
       const query = searchQuery.trim();
 
-      // Try searching by membership_id (number) first
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from("candidate_exam_schedule")
         .select("*")
         .or(`membership_id.eq.${query},can_id.ilike.${query}`)
         .single();
 
       if (error && error.code === "PGRST116") {
-        // No rows returned
-        setError("Kindly note that Member IDs are not included in the first slot. They will be allocated along with the exam schedule in the second slot.");
+        setError("No candidate found with this ID. Please check and try again.");
       } else if (error) {
         setError("Failed to search. Please try again later.");
         console.error(error);
@@ -131,7 +151,6 @@ export default function MemberSearchPage() {
           <Link href="/results" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
             <ClipboardList className="w-5 h-5 mr-3" /> Result
           </Link>
-         
           <Link href="/sessions" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
             <ClipboardList className="w-5 h-5 mr-3" /> Sessions
           </Link>
@@ -145,11 +164,11 @@ export default function MemberSearchPage() {
             <GraduationCap className="w-5 h-5 mr-3" /> Exam schedule
           </Link>
           <Link href="/modelpaper" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
-            </Link>
-<Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
-            </Link>
+            <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
+          </Link>
+          <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+            <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
+          </Link>
         </nav>
       </aside>
 
@@ -160,33 +179,16 @@ export default function MemberSearchPage() {
         <Link href="/sessions" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> Sessions</Link>
         <Link href="/previous" className="flex flex-col items-center"><History className="w-5 h-5 mb-1" /> Previous</Link>
         <Link href="/vlogs" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> B/Vlogs</Link>
-        <Link href="/schedule" className="flex flex-col items-center"><GraduationCap className="w-5 h-5 mb-1" /> Exam schedule</Link>
-        <Link href="/modelpaper" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
-            </Link>
- <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
-            </Link>
+        <Link href="/schedule" className="flex flex-col items-center"><GraduationCap className="w-5 h-5 mb-1" /> Schedule</Link>
+        <Link href="/modelpaper" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Model</Link>
+        <Link href="/tests" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Tests</Link>
         <button onClick={handleSignOut} className="flex flex-col items-center"><LogOut className="w-5 h-5 mb-1" /> Logout</button>
       </nav>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-y-auto">
-        {/* Header */}
         <header className="flex justify-between items-center bg-white shadow px-4 md:px-6 py-3 sticky top-0 z-40">
           <Image src={logo} alt="Logo" className="h-[60px] w-[60px] md:h-[100px] md:w-[100px]" />
-          {/* Beautiful MEPSC Assessment Announcement */}
-              <div className="relative group">
-                
-
-                {/* Tooltip */}
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300 z-10">
-                  <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-4 whitespace-nowrap shadow-2xl">
-                    Click to view Exam Schedule
-                  </div>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-8 border-transparent border-b-gray-900"></div>
-                </div>
-              </div>
           <div className="flex items-center gap-3 md:gap-5">
             <div className="flex items-center gap-2">
               <User2 className="w-5 h-5 text-gray-700" />
@@ -202,21 +204,20 @@ export default function MemberSearchPage() {
           </div>
         </header>
 
-        {/* Scrollable Full Page Content */}
         <main className="flex-1 bg-gray-100 px-4 py-8 md:p-10">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-8">
               Member Search
             </h1>
 
-            {/* Search Form */}
+            
             <form onSubmit={handleSearch} className="mb-10">
               <div className="relative max-w-2xl mx-auto">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Enter Member ID"
+                  placeholder="Enter Membership ID or Candidate ID"
                   className="w-full px-5 py-4 pr-12 text-lg rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition text-black"
                 />
                 {searchQuery && (
@@ -242,7 +243,6 @@ export default function MemberSearchPage() {
               </div>
             </form>
 
-            {/* Loading State */}
             {loading && (
               <div className="text-center py-20">
                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
@@ -250,36 +250,48 @@ export default function MemberSearchPage() {
               </div>
             )}
 
-            {/* Error Message */}
             {error && (
               <div className="p-6 bg-red-50 border border-red-200 text-red-700 rounded-xl text-center mb-8">
                 {error}
               </div>
             )}
 
-            {/* No Search Yet */}
             {!hasSearched && !loading && !candidate && (
               <div className="text-center py-20 text-black">
-                <Search className="w-16 h-16 mx-auto mb-4 text-black" />
+                <Search className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                 <p className="text-lg">Enter a Membership ID or Candidate ID to search</p>
               </div>
             )}
 
-            {/* Candidate Card */}
+            {/* Candidate Profile Card */}
             {candidate && (
               <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
                 <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-8 text-center">
                   <h2 className="text-2xl md:text-3xl font-bold">Candidate Profile</h2>
-                  <p className="mt-2 text-blue-100 text-lg">Membership & Exam Information</p>
+                  <p className="mt-2 text-blue-100 text-lg">MEPSC Certification Journey</p>
                 </div>
 
-                <div className="p-6 md:p-8 space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InfoBox label="Membership ID" value={candidate.membership_id.toString()} />
-                    <InfoBox label="Full Name" value={candidate.name} />
+                <div className="p-6 md:p-10 space-y-10">
+
+                  {/* Qualification Status Badge */}
+                  <div className="text-center">
+                    <span
+                      className={`inline-block px-8 py-4 rounded-full text-xl font-bold text-white shadow-xl ${
+                        candidate.qualification_status === "Qualified"
+                          ? "bg-green-600"
+                          : candidate.qualification_status === "Pending"
+                          ? "bg-orange-500"
+                          : "bg-blue-600"
+                      }`}
+                    >
+                      {candidate.qualification_status || "Level-1 MEPSC EXAM Passed"}
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Basic Info Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <InfoBox label="Membership ID" value={candidate.membership_id.toString()} highlight />
+                    <InfoBox label="Full Name" value={candidate.name} />
                     <InfoBox label="Candidate ID" value={candidate.can_id} highlight />
                     <InfoBox
                       label="Exam Date"
@@ -292,23 +304,68 @@ export default function MemberSearchPage() {
                             })
                           : "Not scheduled"
                       }
-                      highlight
                     />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InfoBox label="Place" value={candidate.place || "—"} />
                     <InfoBox label="State" value={candidate.state || "—"} />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InfoBox label="Batch ID" value={candidate.batch_id || "—"} />
-                    <InfoBox label="Batch Name" value={candidate.batch_name || "—"} />
+                  {/* Progress Tracker */}
+                  <div className="mt-12">
+                    <h3 className="text-2xl font-bold text-center text-gray-800 mb-8">
+                      Certification Progress
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <StatusBox
+                        label="MEPSC Assessment"
+                        status={candidate.mepsc_assesment || "Pending"}
+                        icon={candidate.mepsc_assesment === "Completed" ? <CheckCircle2 className="w-8 h-8 text-green-600" /> : <Clock className="w-8 h-8 text-orange-500" />}
+                      />
+                      <StatusBox
+                        label="Self Test Practice"
+                        status={candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice"}
+                        link={candidate.self_test_practice !== "Completed" ? candidate.self_test_practice : undefined}
+                        icon={candidate.self_test_practice === "Completed" ? <CheckCircle2 className="w-8 h-8 text-green-600" /> : <AlertCircle className="w-8 h-8 text-blue-600" />}
+                      />
+                      <StatusBox
+                        label="Mock Exam"
+                        status={candidate.mock_exam || "Yet to Start"}
+                        icon={candidate.mock_exam === "Completed" ? <CheckCircle2 className="w-8 h-8 text-green-600" /> : <Clock className="w-8 h-8 text-orange-500" />}
+                      />
+                      <StatusBox
+                        label="Final CTPR Exam"
+                        status={candidate.final_ctpr_exam || "Yet to Start"}
+                        icon={candidate.final_ctpr_exam === "Completed" ? <CheckCircle2 className="w-8 h-8 text-green-600" /> : <Clock className="w-8 h-8 text-orange-500" />}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Next Step CTA */}
+                  <div className={`p-8 rounded-2xl text-center text-white font-bold text-xl shadow-xl ${
+                    candidate.next_step === "Apply for fellowship"
+                      ? "bg-gradient-to-r from-green-600 to-emerald-600"
+                      : candidate.Next_step === "Apply for Re-Assessment"
+                      ? "bg-gradient-to-r from-orange-500 to-red-600"
+                      : "bg-gradient-to-r from-blue-600 to-purple-600"
+                  }`}>
+                    <p className="text-lg opacity-90">Next Step</p>
+                    <p className="text-3xl mt-2">
+                      {candidate.next_step || "Attend Mock Test"}
+                    </p>
+                    {candidate.next_step === "Apply for fellowship" && (
+                      <p className="mt-4 text-xl font-normal">
+                        Congratulations! You are now eligible for the Fellowship Program!
+                      </p>
+                    )}
+                    {candidate.next_step === "Apply for Re-Assessment" && (
+                      <p className="mt-4 text-yellow-100 text-lg">
+                        Contact admin to schedule your re-assessment.
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 <div className="bg-gray-50 px-8 py-5 text-center text-sm text-gray-600 border-t">
-                  Information fetched securely from the official database.
+                  Data fetched securely • Last updated: December 2025
                 </div>
               </div>
             )}
@@ -319,13 +376,54 @@ export default function MemberSearchPage() {
   );
 }
 
+// Reusable Info Box
 function InfoBox({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className={`bg-gray-50 p-5 rounded-xl border ${highlight ? "border-blue-300 shadow-md" : "border-gray-200"}`}>
+    <div className={`bg-gray-50 p-6 rounded-xl border ${highlight ? "border-blue-400 shadow-lg" : "border-gray-200"} transition-all`}>
       <span className="text-sm font-medium text-gray-600 block">{label}</span>
-      <p className={`text-xl font-bold mt-1 ${highlight ? "text-blue-700" : "text-gray-900"}`}>
+      <p className={`text-xl font-bold mt-2 ${highlight ? "text-blue-700" : "text-gray-900"}`}>
         {value}
       </p>
+    </div>
+  );
+}
+
+// Status Box with Icon
+function StatusBox({
+  label,
+  status,
+  icon,
+  link,
+}: {
+  label: string;
+  status: string;
+  icon: React.ReactNode;
+  link?: string;
+}) {
+  return (
+    <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 flex items-center justify-between hover:shadow-md transition">
+      <div className="flex items-center gap-4">
+        {icon}
+        <div>
+          <div>
+            <p className="text-sm font-medium text-gray-600">{label}</p>
+            {link ? (
+              <a
+                href={link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-lg font-bold text-blue-600 hover:underline"
+              >
+                {status}
+              </a>
+            ) : (
+              <p className={`text-lg font-bold ${status.includes("Completed") || status === "Qualified" ? "text-green-700" : "text-orange-600"}`}>
+                {status}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
