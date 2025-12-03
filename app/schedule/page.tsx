@@ -343,7 +343,7 @@ export default function MemberSearchPage() {
                   <div className={`p-8 rounded-2xl text-center text-white font-bold text-xl shadow-xl ${
                     candidate.next_step === "Apply for fellowship"
                       ? "bg-gradient-to-r from-green-600 to-emerald-600"
-                      : candidate.Next_step === "Apply for Re-Assessment"
+                      : candidate.next_step === "Apply for Re-Assessment"
                       ? "bg-gradient-to-r from-orange-500 to-red-600"
                       : "bg-gradient-to-r from-blue-600 to-purple-600"
                   }`}>
