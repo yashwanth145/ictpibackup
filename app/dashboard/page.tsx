@@ -144,9 +144,9 @@ export default function Dashboard() {
 
   const courses = [
     { title: "Indirect Tax Laws Compliance (ITXL)", route: "indirecttax", image: accountancy },
-    { title: "Business Regulatory Laws Compliance", route: "business", image: complaince },
+    { title: "Business Regulatory Laws Compliance(BRLC)", route: "business", image: complaince },
     { title: "Direct Tax Laws Compliance (DTLC)", route: "directtax", image: directax },
-    { title: "Applied Financial Accounting & Ethics", route: "appliedfinance", image: appliedfinance },
+    { title: "Applied Financial Accounting & Ethics(AFAE)", route: "appliedfinance", image: appliedfinance },
   ];
 
   const liveSessions = sessions.filter(isSessionLiveNow);

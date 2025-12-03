@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { useRouter} from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -23,6 +23,7 @@ import logo from "../../assets/ICTPL_image.png";
 import { supabase } from "@/lib/Supabase";
 
 import emailNamePairs from "../../public/names.json";
+import { link } from "fs";
 
 interface UserType {
   uid: string;
@@ -50,13 +51,18 @@ interface Candidate {
   batch_name: string | null;
   exam_date: string | null;
 
-  // New columns from your SQL
+  // Existing progress columns
   mepsc_assesment?: string;
   next_step?: string;
   qualification_status?: string;
   self_test_practice?: string;
   mock_exam?: string;
   final_ctpr_exam?: string;
+
+  // New: Retest link for failed/pending MEPSC
+  retest_link?: string|null;
+  fellowship_link?: string|null;
+
 }
 
 export default function MemberSearchPage() {
@@ -95,7 +101,7 @@ export default function MemberSearchPage() {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) {
-      setError("Please enter a Membership ID or Candidate ID");
+      setError("Please enter a Membership ID");
       return;
     }
 
@@ -109,7 +115,10 @@ export default function MemberSearchPage() {
 
       const { data, error } = await supabase
         .from("candidate_exam_schedule")
-        .select("*")
+        .select(`
+          *,
+          retest_link
+        `)
         .or(`membership_id.eq.${query},can_id.ilike.${query}`)
         .single();
 
@@ -179,7 +188,7 @@ export default function MemberSearchPage() {
         <Link href="/sessions" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> Sessions</Link>
         <Link href="/previous" className="flex flex-col items-center"><History className="w-5 h-5 mb-1" /> Previous</Link>
         <Link href="/vlogs" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> B/Vlogs</Link>
-        <Link href="/schedule" className="flex flex-col items-center"><GraduationCap className="w-5 h-5 mb-1" /> Exam Information</Link>
+        <Link href="/schedule" className="flex flex-col items-center"><GraduationCap className="w-5 h-5 mb-1" /> Exam Info</Link>
         <Link href="/modelpaper" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Model</Link>
         <Link href="/tests" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Tests</Link>
         <button onClick={handleSignOut} className="flex flex-col items-center"><LogOut className="w-5 h-5 mb-1" /> Logout</button>
@@ -210,14 +219,13 @@ export default function MemberSearchPage() {
               Member Search
             </h1>
 
-            
             <form onSubmit={handleSearch} className="mb-10">
               <div className="relative max-w-2xl mx-auto">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Enter Membership ID or Candidate ID"
+                  placeholder="Enter Membership ID"
                   className="w-full px-5 py-4 pr-12 text-lg rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition text-black"
                 />
                 {searchQuery && (
@@ -259,7 +267,7 @@ export default function MemberSearchPage() {
             {!hasSearched && !loading && !candidate && (
               <div className="text-center py-20 text-black">
                 <Search className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                <p className="text-lg">Enter a Membership ID or Candidate ID to search</p>
+                <p className="text-lg">Enter a Membership ID to search</p>
               </div>
             )}
 
@@ -268,7 +276,7 @@ export default function MemberSearchPage() {
               <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
                 <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-8 text-center">
                   <h2 className="text-2xl md:text-3xl font-bold">Candidate Profile</h2>
-                  <p className="mt-2 text-blue-100 text-lg">MEPSC Certification Journey</p>
+                  <p className="mt-2 text-blue-100 text-lg">Examination Progress</p>
                 </div>
 
                 <div className="p-6 md:p-10 space-y-10">
@@ -312,53 +320,110 @@ export default function MemberSearchPage() {
                   {/* Progress Tracker */}
                   <div className="mt-12">
                     <h3 className="text-2xl font-bold text-center text-gray-800 mb-8">
-                      Certification Progress
+                      Examination Progress
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* MEPSC Assessment with Retest Link */}
                       <StatusBox
                         label="MEPSC Assessment"
-                        status={candidate.mepsc_assesment || "Pending"}
-                        icon={candidate.mepsc_assesment === "Completed" ? <CheckCircle2 className="w-8 h-8 text-green-600" /> : <Clock className="w-8 h-8 text-orange-500" />}
+                        status={
+                          candidate.mepsc_assesment === "Completed"
+                            ? "Completed"
+                            : candidate.retest_link
+                            ? "Take Retest(Registration)"
+                            : "Pending"
+                        }
+                        link={
+                          candidate.mepsc_assesment !== "Completed" && candidate.retest_link
+                            ? candidate.retest_link
+                            : undefined
+                        }
+                        icon={
+                          candidate.mepsc_assesment === "Completed" ? (
+                            <CheckCircle2 className="w-8 h-8 text-green-600" />
+                          ) : candidate.retest_link ? (
+                            <AlertCircle className="w-8 h-8 text-red-600" />
+                          ) : (
+                            <Clock className="w-8 h-8 text-orange-500" />
+                          )
+                        }
                       />
+
                       <StatusBox
                         label="Self Test Practice"
                         status={candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice"}
                         link={candidate.self_test_practice !== "Completed" ? candidate.self_test_practice : undefined}
-                        icon={candidate.self_test_practice === "Completed" ? <CheckCircle2 className="w-8 h-8 text-green-600" /> : <AlertCircle className="w-8 h-8 text-blue-600" />}
+                        icon={
+                          candidate.self_test_practice === "Completed" ? (
+                            <CheckCircle2 className="w-8 h-8 text-green-600" />
+                          ) : (
+                            <AlertCircle className="w-8 h-8 text-blue-600" />
+                          )
+                        }
                       />
+
                       <StatusBox
                         label="Mock Exam"
                         status={candidate.mock_exam || "Yet to Start"}
-                        icon={candidate.mock_exam === "Completed" ? <CheckCircle2 className="w-8 h-8 text-green-600" /> : <Clock className="w-8 h-8 text-orange-500" />}
+                        icon={
+                          candidate.mock_exam === "Completed" ? (
+                            <CheckCircle2 className="w-8 h-8 text-green-600" />
+                          ) : (
+                            <Clock className="w-8 h-8 text-orange-500" />
+                          )
+                        }
                       />
+
                       <StatusBox
                         label="Final CTPR Exam"
                         status={candidate.final_ctpr_exam || "Yet to Start"}
-                        icon={candidate.final_ctpr_exam === "Completed" ? <CheckCircle2 className="w-8 h-8 text-green-600" /> : <Clock className="w-8 h-8 text-orange-500" />}
+                        icon={
+                          candidate.final_ctpr_exam === "Completed" ? (
+                            <CheckCircle2 className="w-8 h-8 text-green-600" />
+                          ) : (
+                            <Clock className="w-8 h-8 text-orange-500" />
+                          )
+                        }
                       />
                     </div>
                   </div>
 
                   {/* Next Step CTA */}
-                  <div className={`p-8 rounded-2xl text-center text-white font-bold text-xl shadow-xl ${
-                    candidate.next_step === "Apply for fellowship"
-                      ? "bg-gradient-to-r from-green-600 to-emerald-600"
-                      : candidate.next_step === "Apply for Re-Assessment"
-                      ? "bg-gradient-to-r from-orange-500 to-red-600"
-                      : "bg-gradient-to-r from-blue-600 to-purple-600"
-                  }`}>
+                  <div
+                    className={`p-8 rounded-2xl text-center text-white font-bold text-xl shadow-xl ${
+                      candidate.next_step === "Apply for fellowship"
+                        ? "bg-gradient-to-r from-green-600 to-emerald-600"
+                        : candidate.next_step === "Apply for Re-Assessment"
+                        ? "bg-gradient-to-r from-orange-500 to-red-600"
+                        : "bg-gradient-to-r from-blue-600 to-purple-600"
+                    }`}
+                  >
                     <p className="text-lg opacity-90">Next Step</p>
                     <p className="text-3xl mt-2">
                       {candidate.next_step || "Attend Mock Test"}
                     </p>
-                    {candidate.next_step === "Apply for fellowship" && (
-                      <p className="mt-4 text-xl font-normal">
-                        Congratulations! You are now eligible for the Fellowship Program!
-                      </p>
-                    )}
+                    {candidate.next_step === "Apply for fellowship" && candidate.fellowship_link ? (
+  <p className="mt-4 text-xl font-normal">
+    <a
+      href={candidate.fellowship_link}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-2 text-white underline hover:text-purple-300 transition"
+    >
+      <em>Click here to apply for Fellowship</em>
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+      </svg>
+    </a>
+  </p>
+) : candidate.next_step === "Apply for fellowship" ? (
+  <p className="mt-4 text-xl font-normal">
+    Congratulations! You are now eligible for the Fellowship Program!
+  </p>
+) : null}
                     {candidate.next_step === "Apply for Re-Assessment" && (
                       <p className="mt-4 text-yellow-100 text-lg">
-                        Contact admin to schedule your re-assessment.
+                        To take retest please register (Click on Take retest link)
                       </p>
                     )}
                   </div>
@@ -388,7 +453,7 @@ function InfoBox({ label, value, highlight = false }: { label: string; value: st
   );
 }
 
-// Status Box with Icon
+// Status Box with Icon + Optional Link
 function StatusBox({
   label,
   status,
@@ -405,23 +470,29 @@ function StatusBox({
       <div className="flex items-center gap-4">
         {icon}
         <div>
-          <div>
-            <p className="text-sm font-medium text-gray-600">{label}</p>
-            {link ? (
-              <a
-                href={link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-lg font-bold text-blue-600 hover:underline"
-              >
-                {status}
-              </a>
-            ) : (
-              <p className={`text-lg font-bold ${status.includes("Completed") || status === "Qualified" ? "text-green-700" : "text-orange-600"}`}>
-                {status}
-              </p>
-            )}
-          </div>
+          <p className="text-sm font-medium text-gray-600">{label}</p>
+          {link ? (
+            <a
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-lg font-bold text-blue-600 hover:underline"
+            >
+              {status} →
+            </a>
+          ) : (
+            <p
+              className={`text-lg font-bold ${
+                status.includes("Completed") || status === "Qualified"
+                  ? "text-green-700"
+                  : status.includes("Retest")
+                  ? "text-red-600"
+                  : "text-orange-600"
+              }`}
+            >
+              {status}
+            </p>
+          )}
         </div>
       </div>
     </div>
