@@ -48,7 +48,7 @@ export default function ModelPaperPage() {
   const modelPapers: ModelPaper[] = [
     { title: "MEPSC Model Question Paper 2025 - 01", src: "/pdf/modelpaper.pdf", downloadName: "MEPSC_Model_Paper_2025.pdf" },
     { title: "MEPSC Model Question Paper 2025 - 02", src: "/pdf/modelpaper2.pdf", downloadName: "MEPSC_Model_Paper_2025_2.pdf" },
-    { title : "MCQ's",src:"/pdf/MCQ.pdf",downloadName:"MCQ"}
+    { title : "MCQ's of all subjects",src:"/pdf/MCQ.pdf",downloadName:"MCQ"}
   ];
 
   const isSessionLiveNow = (s: Session): boolean => {
