@@ -301,7 +301,7 @@ export default function MemberSearchPage() {
                               month: "long",
                               year: "numeric",
                             })
-                          : "Completed"}
+                          : "--"}
                       </p>
                     </div>
                     <div>
