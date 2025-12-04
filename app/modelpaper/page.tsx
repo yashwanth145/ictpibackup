@@ -48,6 +48,7 @@ export default function ModelPaperPage() {
   const modelPapers: ModelPaper[] = [
     { title: "MEPSC Model Question Paper 2025 - 01", src: "/pdf/modelpaper.pdf", downloadName: "MEPSC_Model_Paper_2025.pdf" },
     { title: "MEPSC Model Question Paper 2025 - 02", src: "/pdf/modelpaper2.pdf", downloadName: "MEPSC_Model_Paper_2025_2.pdf" },
+    { title : "MCQ's",src:"/pdf/MCQ.pdf",downloadName:"MCQ"}
   ];
 
   const isSessionLiveNow = (s: Session): boolean => {
@@ -209,7 +210,7 @@ export default function ModelPaperPage() {
                       <h3 className="text-xl font-semibold text-gray-800 mb-4">{paper.title}</h3>
                       <div className="flex flex-col sm:flex-row gap-4">
                         <button onClick={() => { setSelectedPaper(paper); setShowModal(true); }} className="flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-md">
-                          <Eye className="w-5 h-5" /> View Fullgall
+                          <Eye className="w-5 h-5" /> View Full
                         </button>
                         <a href={paper.src} download={paper.downloadName} className="flex items-center justify-center gap-3 px-6 py-4 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition shadow-md">
                           <Download className="w-5 h-5" /> Download PDF
