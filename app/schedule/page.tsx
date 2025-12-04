@@ -137,7 +137,23 @@ export default function MemberSearchPage() {
     setHasSearched(false);
   };
 
-  // NEW: Check if any step is truly pending (not completed + no link)
+  // Determine the exact next step in sequence
+  const getNextStepMessage = (c: Candidate): string => {
+    if (!c.mepsc_assesment || c.mepsc_assesment !== "Completed") {
+      return c.retest_link ? "Retake MEPSC Assessment" : "Complete MEPSC Assessment";
+    }
+    if (!c.self_test_practice || c.self_test_practice !== "Completed") {
+      return "Complete Self Test Practice";
+    }
+    if (!c.mock_exam || c.mock_exam !== "Completed") {
+      return "Complete Mock Exam";
+    }
+    if (!c.final_ctpr_exam || c.final_ctpr_exam !== "Completed") {
+      return "Appear for Final CTPR Exam";
+    }
+    return c.next_step === "Apply for fellowship" || !c.next_step ? "Apply for Fellowship" : c.next_step;
+  };
+
   const hasPendingStep = candidate
     ? !(
         (candidate.mepsc_assesment === "Completed" || candidate.retest_link) &&
@@ -145,13 +161,6 @@ export default function MemberSearchPage() {
         candidate.mock_exam === "Completed" &&
         candidate.final_ctpr_exam === "Completed"
       )
-    : false;
-
-  const isFullyQualified = candidate
-    ? candidate.mepsc_assesment === "Completed" &&
-      candidate.self_test_practice === "Completed" &&
-      candidate.mock_exam === "Completed" &&
-      candidate.final_ctpr_exam === "Completed"
     : false;
 
   if (!auth || auth.loading)
@@ -312,7 +321,7 @@ export default function MemberSearchPage() {
                     </div>
                   </div>
 
-                  {/* PRESENT STATUS — NOW RED IF ANYTHING IS PENDING */}
+                  {/* PRESENT STATUS */}
                   <div className="text-center">
                     <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-8">Present Status</h3>
                     <div className="flex justify-center my-8">
@@ -325,9 +334,7 @@ export default function MemberSearchPage() {
                           }
                         `}
                       >
-                        {hasPendingStep
-                          ? "PENDING"
-                          : candidate.qualification_status || "QUALIFIED"}
+                        {hasPendingStep ? "PENDING" : candidate.qualification_status || "QUALIFIED"}
                       </span>
                     </div>
                   </div>
@@ -360,20 +367,22 @@ export default function MemberSearchPage() {
                     />
                   </div>
 
+                  {/* NEXT STEP - NOW SHOWS EXACT NEXT ACTION */}
                   <div className="mt-12">
                     <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-center py-8 rounded-2xl shadow-2xl">
                       <p className="text-lg font-medium opacity-90">Next Step</p>
                       <p className="text-3xl font-bold mt-3">
-                        {hasPendingStep ? "Complete Pending Steps Above" : (candidate.next_step || "Apply for fellowship")}
+                        {getNextStepMessage(candidate)}
                       </p>
-                      {!hasPendingStep && candidate.next_step === "Apply for fellowship" && candidate.fellowship_link && (
+                      {/* Show fellowship link only when that's the actual next step */}
+                      {!hasPendingStep && candidate.fellowship_link && (
                         <a
                           href={candidate.fellowship_link}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-block mt-5 text-xl underline hover:text-green-100 transition"
                         >
-                          Click here to apply for Fellowship
+                          Click here to apply for Fellowship →
                         </a>
                       )}
                     </div>
@@ -392,7 +401,6 @@ export default function MemberSearchPage() {
   );
 }
 
-// ProgressBox — already perfect from previous fix
 function ProgressBox({
   label,
   status,
