@@ -23,7 +23,6 @@ import logo from "../../assets/ICTPL_image.png";
 import { supabase } from "@/lib/Supabase";
 
 import emailNamePairs from "../../public/names.json";
-import { link } from "fs";
 
 interface UserType {
   uid: string;
@@ -51,7 +50,6 @@ interface Candidate {
   batch_name: string | null;
   exam_date: string | null;
 
-  // Existing progress columns
   mepsc_assesment?: string;
   next_step?: string;
   qualification_status?: string;
@@ -59,10 +57,8 @@ interface Candidate {
   mock_exam?: string;
   final_ctpr_exam?: string;
 
-  // New: Retest link for failed/pending MEPSC
-  retest_link?: string|null;
-  fellowship_link?: string|null;
-
+  retest_link?: string | null;
+  fellowship_link?: string | null;
 }
 
 export default function MemberSearchPage() {
@@ -271,165 +267,130 @@ export default function MemberSearchPage() {
               </div>
             )}
 
-            {/* Candidate Profile Card */}
+            {/* === PERFECT UI FROM YOUR IMAGE === */}
             {candidate && (
-              <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-8 text-center">
+              <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-w-4xl mx-auto">
+                {/* Blue Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-6 text-center">
                   <h2 className="text-2xl md:text-3xl font-bold">Candidate Profile</h2>
-                  <p className="mt-2 text-blue-100 text-lg">Examination Progress</p>
+                  <p className="mt-1 text-blue-100 text-lg">Consultant Chartered Tax Practitioner Examination Journey</p>
                 </div>
 
-                <div className="p-6 md:p-10 space-y-10">
-
-                  {/* Qualification Status Badge */}
+                <div className="p-6 md:p-10 space-y-8">
+                  {/* Full Name */}
                   <div className="text-center">
-                    <span
-                      className={`inline-block px-8 py-4 rounded-full text-xl font-bold text-white shadow-xl ${
-                        candidate.qualification_status === "Qualified"
-                          ? "bg-green-600"
-                          : candidate.qualification_status === "Pending"
-                          ? "bg-orange-500"
-                          : "bg-blue-600"
-                      }`}
-                    >
-                      {candidate.qualification_status || "Level-1 MEPSC EXAM Passed"}
-                    </span>
+                    <p className="text-sm font-medium text-gray-600 uppercase tracking-wider">Full Name</p>
+                    <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-3">
+                      {candidate.name}
+                    </h1>
                   </div>
 
-                  {/* Basic Info Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <InfoBox label="Membership ID" value={candidate.membership_id.toString()} highlight />
-                    <InfoBox label="Full Name" value={candidate.name} />
-                    <InfoBox label="Candidate ID" value={candidate.can_id} highlight />
-                    <InfoBox
-                      label="Exam Date"
-                      value={
-                        candidate.exam_date
+                  {/* Membership ID & Candidate ID */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+                    <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
+                      <p className="text-sm text-gray-600">Membership ID</p>
+                      <p className="text-2xl font-bold text-blue-800 mt-2">
+                        {String(candidate.membership_id).padStart(5, "0")}
+                      </p>
+                    </div>
+                    <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
+                      <p className="text-sm text-gray-600">Candidate ID</p>
+                      <p className="text-2xl font-bold text-blue-800 mt-2">
+                        {candidate.can_id}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Exam Date, Place, State */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto text-center">
+                    <div>
+                      <p className="text-sm text-gray-600">MEPSC Exam Date</p>
+                      <p className="text-lg font-semibold text-gray-900 mt-1">
+                        {candidate.exam_date
                           ? new Date(candidate.exam_date).toLocaleDateString("en-IN", {
                               day: "2-digit",
                               month: "long",
                               year: "numeric",
                             })
-                          : "Not scheduled"
-                      }
-                    />
-                    <InfoBox label="Place" value={candidate.place || "—"} />
-                    <InfoBox label="State" value={candidate.state || "—"} />
-                  </div>
-
-                  {/* Progress Tracker */}
-                  <div className="mt-12">
-                    <h3 className="text-2xl font-bold text-center text-gray-800 mb-8">
-                      Examination Progress
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* MEPSC Assessment with Retest Link */}
-                      <StatusBox
-                        label="MEPSC Assessment"
-                        status={
-                          candidate.mepsc_assesment === "Completed"
-                            ? "Completed"
-                            : candidate.retest_link
-                            ? "Take Retest(Registration)"
-                            : "Pending"
-                        }
-                        link={
-                          candidate.mepsc_assesment !== "Completed" && candidate.retest_link
-                            ? candidate.retest_link
-                            : undefined
-                        }
-                        icon={
-                          candidate.mepsc_assesment === "Completed" ? (
-                            <CheckCircle2 className="w-8 h-8 text-green-600" />
-                          ) : candidate.retest_link ? (
-                            <AlertCircle className="w-8 h-8 text-red-600" />
-                          ) : (
-                            <Clock className="w-8 h-8 text-orange-500" />
-                          )
-                        }
-                      />
-
-                      <StatusBox
-                        label="Self Test Practice"
-                        status={candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice"}
-                        link={candidate.self_test_practice !== "Completed" ? candidate.self_test_practice : undefined}
-                        icon={
-                          candidate.self_test_practice === "Completed" ? (
-                            <CheckCircle2 className="w-8 h-8 text-green-600" />
-                          ) : (
-                            <AlertCircle className="w-8 h-8 text-blue-600" />
-                          )
-                        }
-                      />
-
-                      <StatusBox
-                        label="Mock Exam"
-                        status={candidate.mock_exam || "Yet to Start"}
-                        icon={
-                          candidate.mock_exam === "Completed" ? (
-                            <CheckCircle2 className="w-8 h-8 text-green-600" />
-                          ) : (
-                            <Clock className="w-8 h-8 text-orange-500" />
-                          )
-                        }
-                      />
-
-                      <StatusBox
-                        label="Final CTPR Exam"
-                        status={candidate.final_ctpr_exam || "Yet to Start"}
-                        icon={
-                          candidate.final_ctpr_exam === "Completed" ? (
-                            <CheckCircle2 className="w-8 h-8 text-green-600" />
-                          ) : (
-                            <Clock className="w-8 h-8 text-orange-500" />
-                          )
-                        }
-                      />
+                          : "Completed"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Place</p>
+                      <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">
+                        {candidate.place || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">State</p>
+                      <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">
+                        {candidate.state || "—"}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Next Step CTA */}
-                  <div
-                    className={`p-8 rounded-2xl text-center text-white font-bold text-xl shadow-xl ${
-                      candidate.next_step === "Apply for fellowship"
-                        ? "bg-gradient-to-r from-green-600 to-emerald-600"
-                        : candidate.next_step === "Apply for Re-Assessment"
-                        ? "bg-gradient-to-r from-orange-500 to-red-600"
-                        : "bg-gradient-to-r from-blue-600 to-purple-600"
-                    }`}
-                  >
-                    <p className="text-lg opacity-90">Next Step</p>
-                    <p className="text-3xl mt-2">
-                      {candidate.next_step || "Attend Mock Test"}
-                    </p>
-                    {candidate.next_step === "Apply for fellowship" && candidate.fellowship_link ? (
-  <p className="mt-4 text-xl font-normal">
-    <a
-      href={candidate.fellowship_link}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 text-white underline hover:text-purple-300 transition"
-    >
-      <em>Click here to apply for Fellowship</em>
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-      </svg>
-    </a>
-  </p>
-) : candidate.next_step === "Apply for fellowship" ? (
-  <p className="mt-4 text-xl font-normal">
-    Congratulations! You are now eligible for the Fellowship Program!
-  </p>
-) : null}
-                    {candidate.next_step === "Apply for Re-Assessment" && (
-                      <p className="mt-4 text-yellow-100 text-lg">
-                        To take retest please register (Click on Take retest link)
+                  {/* Consultant Chartered Tax Practitioner Examination Journey + Qualified Badge */}
+                  <div className="text-center">
+                    <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-8">
+                      Consultant Chartered Tax Practitioner Examination Journey
+                    </h3>
+
+                    <div className="flex justify-center my-8">
+                      <span className="inline-block px-12 py-4 bg-green-600 text-white font-bold text-2xl rounded-full shadow-2xl">
+                        {candidate.qualification_status || "Qualified"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 4 Progress Boxes */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+                    <ProgressBox
+                      label="MEPSC Assessment"
+                      status={candidate.mepsc_assesment === "Completed" ? "Completed" : "Pending"}
+                      completed={candidate.mepsc_assesment === "Completed"}
+                      link={candidate.retest_link || undefined}
+                    />
+                    <ProgressBox
+                      label="Self Test Practice"
+                      status={candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice"}
+                      completed={candidate.self_test_practice === "Completed"}
+                      link={candidate.self_test_practice !== "Completed" ? candidate.self_test_practice : undefined}
+                    />
+                    <ProgressBox
+                      label="Mock Exam"
+                      status={candidate.mock_exam || "Yet to Start"}
+                      completed={candidate.mock_exam === "Completed"}
+                    />
+                    <ProgressBox
+                      label="Final CTPR Exam"
+                      status={candidate.final_ctpr_exam || "Yet to Start"}
+                      completed={candidate.final_ctpr_exam === "Completed"}
+                    />
+                  </div>
+
+                  {/* Next Step */}
+                  <div className="mt-12">
+                    <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-center py-8 rounded-2xl shadow-2xl">
+                      <p className="text-lg font-medium opacity-90">Next Step</p>
+                      <p className="text-3xl font-bold mt-3">
+                        {candidate.next_step || "Apply for fellowship"}
                       </p>
-                    )}
+                      {candidate.next_step === "Apply for fellowship" && candidate.fellowship_link && (
+                        <a
+                          href={candidate.fellowship_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block mt-5 text-xl underline hover:text-green-100 transition"
+                        >
+                          Click here to apply for Fellowship
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 px-8 py-5 text-center text-sm text-gray-600 border-t">
+                {/* Footer */}
+                <div className="bg-gray-50 px-8 py-4 text-center text-sm text-gray-600 border-t">
                   Data fetched securely • Last updated: December 2025
                 </div>
               </div>
@@ -441,60 +402,44 @@ export default function MemberSearchPage() {
   );
 }
 
-// Reusable Info Box
-function InfoBox({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div className={`bg-gray-50 p-6 rounded-xl border ${highlight ? "border-blue-400 shadow-lg" : "border-gray-200"} transition-all`}>
-      <span className="text-sm font-medium text-gray-600 block">{label}</span>
-      <p className={`text-xl font-bold mt-2 ${highlight ? "text-blue-700" : "text-gray-900"}`}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
-// Status Box with Icon + Optional Link
-function StatusBox({
+// Progress Box Component
+function ProgressBox({
   label,
   status,
-  icon,
+  completed,
   link,
 }: {
   label: string;
   status: string;
-  icon: React.ReactNode;
+  completed: boolean;
   link?: string;
 }) {
   return (
-    <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 flex items-center justify-between hover:shadow-md transition">
-      <div className="flex items-center gap-4">
-        {icon}
-        <div>
-          <p className="text-sm font-medium text-gray-600">{label}</p>
-          {link ? (
-            <a
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-lg font-bold text-blue-600 hover:underline"
-            >
-              {status} →
-            </a>
-          ) : (
-            <p
-              className={`text-lg font-bold ${
-                status.includes("Completed") || status === "Qualified"
-                  ? "text-green-700"
-                  : status.includes("Retest")
-                  ? "text-red-600"
-                  : "text-orange-600"
-              }`}
-            >
-              {status}
-            </p>
-          )}
-        </div>
+    <div className="bg-gray-50 border border-gray-300 rounded-xl p-6 text-center hover:shadow-lg transition">
+      <div className="flex justify-center mb-4">
+        {completed ? (
+          <CheckCircle2 className="w-10 h-10 text-green-600" />
+        ) : link ? (
+          <AlertCircle className="w-10 h-10 text-red-600" />
+        ) : (
+          <Clock className="w-10 h-10 text-orange-500" />
+        )}
       </div>
+      <p className="text-sm text-gray-600">{label}</p>
+      {link ? (
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block mt-3 text-lg font-bold text-blue-600 hover:underline"
+        >
+          {status} →
+        </a>
+      ) : (
+        <p className={`mt-3 text-lg font-bold ${completed ? "text-green-700" : "text-orange-600"}`}>
+          {status}
+        </p>
+      )}
     </div>
   );
 }
