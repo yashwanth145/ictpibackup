@@ -21,7 +21,6 @@ import {
 import Image from "next/image";
 import logo from "../../assets/ICTPL_image.png";
 import { supabase } from "@/lib/Supabase";
-
 import emailNamePairs from "../../public/names.json";
 
 interface UserType {
@@ -111,10 +110,7 @@ export default function MemberSearchPage() {
 
       const { data, error } = await supabase
         .from("candidate_exam_schedule")
-        .select(`
-          *,
-          retest_link
-        `)
+        .select(`*, retest_link`)
         .or(`membership_id.eq.${query},can_id.ilike.${query}`)
         .single();
 
@@ -183,8 +179,6 @@ export default function MemberSearchPage() {
         <Link href="/results" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> Results</Link>
         <Link href="/sessions" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> Sessions</Link>
         <Link href="/previous" className="flex flex-col items-center"><History className="w-5 h-5 mb-1" /> Previous</Link>
-        <Link href="/vlogs" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> B/Vlogs</Link>
-        <Link href="/schedule" className="flex flex-col items-center"><GraduationCap className="w-5 h-5 mb-1" /> Exam Info</Link>
         <Link href="/modelpaper" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Model</Link>
         <Link href="/tests" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Tests</Link>
         <button onClick={handleSignOut} className="flex flex-col items-center"><LogOut className="w-5 h-5 mb-1" /> Logout</button>
@@ -267,17 +261,14 @@ export default function MemberSearchPage() {
               </div>
             )}
 
-            {/* === PERFECT UI FROM YOUR IMAGE === */}
             {candidate && (
               <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-w-4xl mx-auto">
-                {/* Blue Header */}
                 <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-6 text-center">
                   <h2 className="text-2xl md:text-3xl font-bold">Candidate Profile</h2>
-                  <p className="mt-1 text-blue-100 text-lg">Consultant Chartered Tax Practitioner Examination Journey</p>
+                  <p className="mt-1 text-blue-100 text-lg">Consultant Chartered Tax Practitioner Examination Journey</p>
                 </div>
 
                 <div className="p-6 md:p-10 space-y-8">
-                  {/* Full Name */}
                   <div className="text-center">
                     <p className="text-sm font-medium text-gray-600 uppercase tracking-wider">Full Name</p>
                     <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-3">
@@ -285,7 +276,6 @@ export default function MemberSearchPage() {
                     </h1>
                   </div>
 
-                  {/* Membership ID & Candidate ID */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
                     <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
                       <p className="text-sm text-gray-600">Membership ID</p>
@@ -301,7 +291,6 @@ export default function MemberSearchPage() {
                     </div>
                   </div>
 
-                  {/* Exam Date, Place, State */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto text-center">
                     <div>
                       <p className="text-sm text-gray-600">MEPSC Exam Date</p>
@@ -329,12 +318,8 @@ export default function MemberSearchPage() {
                     </div>
                   </div>
 
-                  {/* Consultant Chartered Tax Practitioner Examination Journey + Qualified Badge */}
                   <div className="text-center">
-                    <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-8">
-                      Consultant Chartered Tax Practitioner Examination Journey
-                    </h3>
-
+                    <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-8">Present Status</h3>
                     <div className="flex justify-center my-8">
                       <span className="inline-block px-12 py-4 bg-green-600 text-white font-bold text-2xl rounded-full shadow-2xl">
                         {candidate.qualification_status || "Qualified"}
@@ -342,7 +327,7 @@ export default function MemberSearchPage() {
                     </div>
                   </div>
 
-                  {/* 4 Progress Boxes */}
+                  {/* Progress Boxes with RED for pending */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
                     <ProgressBox
                       label="MEPSC Assessment"
@@ -354,21 +339,20 @@ export default function MemberSearchPage() {
                       label="Self Test Practice"
                       status={candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice"}
                       completed={candidate.self_test_practice === "Completed"}
-                      link={candidate.self_test_practice !== "Completed" ? candidate.self_test_practice : undefined}
+                      link={candidate.self_test_practice !== "Completed" ? "/tests" : undefined}
                     />
                     <ProgressBox
                       label="Mock Exam"
-                      status={candidate.mock_exam || "Yet to Start"}
+                      status={candidate.mock_exam === "Completed" ? "Completed" : "Pending"}
                       completed={candidate.mock_exam === "Completed"}
                     />
                     <ProgressBox
                       label="Final CTPR Exam"
-                      status={candidate.final_ctpr_exam || "Yet to Start"}
+                      status={candidate.final_ctpr_exam === "Completed" ? "Completed" : "Pending"}
                       completed={candidate.final_ctpr_exam === "Completed"}
                     />
                   </div>
 
-                  {/* Next Step */}
                   <div className="mt-12">
                     <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-center py-8 rounded-2xl shadow-2xl">
                       <p className="text-lg font-medium opacity-90">Next Step</p>
@@ -389,7 +373,6 @@ export default function MemberSearchPage() {
                   </div>
                 </div>
 
-                {/* Footer */}
                 <div className="bg-gray-50 px-8 py-4 text-center text-sm text-gray-600 border-t">
                   Data fetched securely • Last updated: December 2025
                 </div>
@@ -402,7 +385,7 @@ export default function MemberSearchPage() {
   );
 }
 
-// Progress Box Component
+// Updated Progress Box with RED for pending
 function ProgressBox({
   label,
   status,
@@ -414,29 +397,34 @@ function ProgressBox({
   completed: boolean;
   link?: string;
 }) {
+  const isPending = !completed && !link;
+  const hasLink = !!link;
+
   return (
     <div className="bg-gray-50 border border-gray-300 rounded-xl p-6 text-center hover:shadow-lg transition">
       <div className="flex justify-center mb-4">
         {completed ? (
-          <CheckCircle2 className="w-10 h-10 text-green-600" />
-        ) : link ? (
-          <AlertCircle className="w-10 h-10 text-red-600" />
+          <CheckCircle2 className="w-12 h-12 text-green-600" />
+        ) : hasLink ? (
+          <AlertCircle className="w-12 h-12 text-blue-600 animate-pulse" />
         ) : (
-          <Clock className="w-10 h-10 text-orange-500" />
+          <Clock className="w-12 h-12 text-red-600" />
         )}
       </div>
-      <p className="text-sm text-gray-600">{label}</p>
-      {link ? (
+
+      <p className="text-sm font-medium text-gray-600">{label}</p>
+
+      {hasLink ? (
         <a
           href={link}
           target="_blank"
           rel="noopener noreferrer"
-          className="block mt-3 text-lg font-bold text-blue-600 hover:underline"
+          className="block mt-4 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md"
         >
           {status} →
         </a>
       ) : (
-        <p className={`mt-3 text-lg font-bold ${completed ? "text-green-700" : "text-orange-600"}`}>
+        <p className={`mt-4 text-xl font-bold ${completed ? "text-green-600" : "text-red-600"}`}>
           {status}
         </p>
       )}

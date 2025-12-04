@@ -1,212 +1,217 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  LayoutDashboard,
-  ClipboardList,
-  User2,
-  LogOut,
-  History,
-  GraduationCap,
-  ClipboardPenLine,
-} from "lucide-react";
 import Image from "next/image";
+import {
+  LayoutDashboard, ClipboardList, History, GraduationCap,
+  ClipboardPenLine, User2, LogOut, Eye, Download, X
+} from "lucide-react";
 
-// Assets
 import logo from "../../assets/ICTPL_image.png";
-
-// Email → Name mapping
 import emailNamePairs from "../../public/names.json";
 
-/* -------------------------------------------------
-   Email → Name Map
-   ------------------------------------------------- */
+// Email to Name Mapping
 const emailToName = new Map<string, string>();
 Object.entries(emailNamePairs as Record<string, string>).forEach(([email, name]) => {
   emailToName.set(email.toLowerCase(), name);
 });
 
-/* -------------------------------------------------
-   Dashboard Component
-   ------------------------------------------------- */
-export default function Dashboard() {
+// Your Model Papers (Add more as needed)
+const modelPapers = [
+  { title: "Applied Financial accounting and ethics", src: "/pdf/Indirect Tax Law Compliances.pdf", download: "Applied Financial accounting and ethics" },
+  { title: "Business Regulatory Laws and compliances", src: "/pdf/Business Regulatory Laws and compliances.pdf", download: "Business Regulatory Laws and compliances" },
+  { title: "Direct Tax Law Compliances", src: "/pdf/Direct Tax Law Compliances.pdf", download: "Direct Tax Law Compliances" },
+  { title: "Indirect Tax Law Compliances", src: "/pdf/Indirect Tax Law Compliances.pdf", download: "Indirect Tax Law Compliances" },
+];
+
+export default function ModelPaperPage() {
   const auth = useAuth() as any;
   const router = useRouter();
+  const pathname = usePathname();
+  const [selectedPdf, setSelectedPdf] = useState<string | null>(null);
 
-  /* ---------- Auth Guard ---------- */
   useEffect(() => {
-    if (!auth) return;
-    if (!auth.loading && !auth.user) {
-      router.push("/");
-    }
+    if (!auth || auth.loading) return;
+    if (!auth.user) router.push("/");
   }, [auth, router]);
+
+  const handleSignOut = async () => {
+    await auth.signOut?.();
+    router.push("/");
+  };
+
+  const getUserName = () => {
+    const email = auth?.user?.email?.toLowerCase();
+    return email && emailToName.has(email) ? emailToName.get(email)! : email?.split("@")[0] || "Student";
+  };
 
   if (!auth || auth.loading) {
     return (
-      <p className="text-center mt-32 text-gray-600 text-lg">Loading...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <p className="text-xl text-gray-600">Loading...</p>
+      </div>
     );
   }
+
   if (!auth.user) return null;
 
-  /* ---------- Handlers ---------- */
-  const handleSignOut = async () => {
-    try {
-      await auth.signOut?.();
-      router.push("/");
-    } catch (e) {
-      console.error("Sign out failed:", e);
-    }
-  };
-
-  /* ---------- Get Full Name from Email ---------- */
-  const getUserDisplayName = () => {
-    const userEmail = auth.user?.email?.toLowerCase();
-    if (userEmail && emailToName.has(userEmail)) {
-      return emailToName.get(userEmail)!;
-    }
-    return auth.user?.email?.split("@")[0] || "User";
-  };
-
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gray-100">
-      {/* Sticky Left Sidebar with Logo */}
-      <aside className="hidden md:block w-64 bg-[#0062cc] text-white flex flex-col sticky top-0 h-screen overflow-y-auto">
-        {/* Logo Section */}
-        
-        {/* Navigation Links */}
-        <nav className="flex-1 px-4 py-6 space-y-2">
-          {[
-            { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-            { href: "/results", icon: ClipboardList, label: "Results" },
-            { href: "/sessions", icon: ClipboardList, label: "Sessions" },
-            { href: "/previous", icon: History, label: "Previous Sessions" },
-            { href: "/vlogs", icon: ClipboardList, label: "B/Vlogs" },
-            { href: "/schedule", icon: GraduationCap, label: "Exam Schedule" },
-            { href: "/modelpaper", icon: ClipboardPenLine, label: "Model Papers" },
-            { href: "/tests", icon: ClipboardPenLine, label: "Practice Tests" },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium"
-            >
-              <item.icon className="w-5 h-5" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+    <>
+      <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
 
-        
-      </aside>
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="bg-white shadow-md sticky top-0 z-40">
-          <div className="flex flex-col md:flex-row items-center justify-between px-4 py-4 gap-4">
-           <Image src={logo} alt="Logo" className="h-[60px] w-[60px] md:h-[100px] md:w-[100px]" />
-          <div className="md:hidden">
-            </div>
-
-            {/* MEPSC Announcement */}
-            <div className="flex-1 flex justify-center">
-              <Link href="/schedule" className="group relative">
-                <div className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs md:text-sm lg:text-base px-5 py-3 rounded-xl shadow-2xl transition-all transform hover:scale-105 animate-pulse text-center leading-tight">
-                  <span className="tracking-wider block">MEPSC ASSESSMENT</span>
-                  <span className="tracking-wider block">STARTS FROM TOMORROW</span>
-                  <span className="text-xs opacity-90 block mt-1">
-                    Tap to view your schedule
-                  </span>
-                </div>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                  <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-4 whitespace-nowrap shadow-2xl">
-                    Click to view Exam Schedule
-                  </div>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-8 border-transparent border-b-gray-900"></div>
-                </div>
-              </Link>
-            </div>
-
-            {/* User Info */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 text-right">
-                <User2 className="w-8 h-8 text-gray-700" />
-                <div>
-                  <p className="text-xs text-gray-500">Welcome back,</p>
-                  <p className="font-bold text-gray-800 truncate max-w-[160px]">
-                    {getUserDisplayName()}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="hidden md:flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>Sign Out</span>
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="flex-1 p-6 md:p-10">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center p-16 bg-white rounded-3xl shadow-2xl border border-gray-200">
-              <h1 className="text-5xl md:text-6xl font-extrabold text-gray-800 mb-6">
-                <em>Coming Soon</em>
-              </h1>
-             
-            </div>
-          </div>
-        </main>
-
-        {/* Mobile Bottom Navigation - Horizontal Scroll */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0062cc]/95 backdrop-blur-sm text-white z-50 shadow-2xl">
-          <div className="flex overflow-x-auto scrollbar-hide py-3 px-2">
+        {/* Sidebar - Desktop */}
+        <aside className="hidden md:block w-64 bg-[#0062cc] text-white h-screen sticky top-0">
+          
+          <nav className="p-4 space-y-2">
             {[
-              { href: "/dashboard", icon: LayoutDashboard, label: "Home" },
+              { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
               { href: "/results", icon: ClipboardList, label: "Results" },
               { href: "/sessions", icon: ClipboardList, label: "Sessions" },
-              { href: "/previous", icon: History, label: "Prev" },
-              { href: "/vlogs", icon: ClipboardList, label: "Vlogs" },
-              { href: "/schedule", icon: GraduationCap, label: "Exam Information" },
-              { href: "/modelpaper", icon: ClipboardPenLine, label: "Papers", },
-              {href:"/tests",icon:ClipboardPenLine,label:"Practice Tests"},
+              { href: "/previous", icon: History, label: "Previous" },
+              { href: "/schedule", icon: GraduationCap, label: "Schedule" },
+              { href: "/modelpaper", icon: ClipboardPenLine, label: "Model Papers" },
+              { href: "/tests", icon: ClipboardPenLine, label: "Practice Tests" },
             ].map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-col items-center min-w-[70px] px-3 py-2 text-xs font-medium"
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-medium ${
+                  pathname === item.href ? "bg-blue-800 shadow-lg" : "hover:bg-blue-700"
+                }`}
               >
-                <item.icon className="w-6 h-6 mb-1" />
+                <item.icon className="w-5 h-5" />
                 {item.label}
               </Link>
             ))}
-            <button
-              onClick={handleSignOut}
-              className="flex flex-col items-center min-w-[70px] px-3 py-2 text-xs font-medium text-red-200"
-            >
-              <LogOut className="w-6 h-6 mb-1" />
-              Logout
-            </button>
+          </nav>
+        </aside>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <header className="bg-white shadow-md sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
+            <Image src={logo} alt="Logo" className="h-16 w-16 md:h-20 md:w-20" />
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="font-bold text-gray-800">{getUserName()}</p>
+              </div>
+              <User2 className="w-10 h-10 text-gray-700" />
+              <button
+                onClick={handleSignOut}
+                className="hidden md:flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+              >
+                <LogOut className="w-5 h-5" /> Sign Out
+              </button>
+            </div>
+          </header>
+
+          {/* Model Papers Section */}
+          <main className="flex-1 p-6 md:p-10 pb-24 md:pb-10">
+            <div className="max-w-4xl mx-auto">
+              
+
+              <div className="grid gap-6">
+                {modelPapers.map((paper, index) => (
+                  <div
+                    key={index}
+                    className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all border border-gray-200"
+                  >
+                    <h3 className="text-xl font-bold text-gray-800 mb-4">{paper.title}</h3>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <button
+                        onClick={() => setSelectedPdf(paper.src)}
+                        className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition"
+                      >
+                        <Eye className="w-5 h-5" />
+                        View PDF
+                      </button>
+                      <a
+                        href={paper.src}
+                        download={paper.download}
+                        className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition text-center"
+                      >
+                        <Download className="w-5 h-5" />
+                        Download
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </main>
+
+          {/* Mobile Bottom Navigation */}
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0062cc] text-white z-50 shadow-2xl">
+            <div className="flex overflow-x-auto scrollbar-hide py-3 px-2 text-xs">
+              {[
+                { href: "/dashboard", icon: LayoutDashboard, label: "Home" },
+                { href: "/results", icon: ClipboardList, label: "Results" },
+                { href: "/sessions", icon: ClipboardList, label: "Sessions" },
+                { href: "/previous", icon: History, label: "Prev" },
+                { href: "/modelpaper", icon: ClipboardPenLine, label: "Papers" },
+                { href: "/tests", icon: ClipboardPenLine, label: "Tests" },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex flex-col items-center min-w-[70px] px-3 py-2 font-medium"
+                >
+                  <item.icon className="w-6 h-6 mb-1" />
+                  {item.label}
+                </Link>
+              ))}
+              <button
+                onClick={handleSignOut}
+                className="flex flex-col items-center min-w-[70px] px-3 py-2 font-medium text-red-200"
+              >
+                <LogOut className="w-6 h-6 mb-1" />
+                Logout
+              </button>
+            </div>
+          </nav>
+        </div>
+
+        {/* Fullscreen PDF Viewer Modal */}
+        {selectedPdf && (
+          <div className="fixed inset-0 bg-black bg-opacity-95 z-50 flex flex-col">
+            <div className="bg-gray-900 text-white p-4 flex justify-between items-center shadow-xl">
+              <h3 className="text-lg font-semibold truncate max-w-2xl">
+                {modelPapers.find(p => p.src === selectedPdf)?.title}
+              </h3>
+              <div className="flex gap-3">
+                <a
+                  href={selectedPdf}
+                  download
+                  className="px-5 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium flex items-center gap-2"
+                >
+                  <Download className="w-5 h-5" /> Download
+                </a>
+                <button
+                  onClick={() => setSelectedPdf(null)}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium flex items-center gap-2"
+                >
+                  <X className="w-5 h-5" /> Close
+                </button>
+              </div>
+            </div>
+            <iframe
+              src={selectedPdf}
+              className="flex-1 w-full bg-white"
+              title="PDF Viewer"
+              allowFullScreen
+            />
           </div>
-        </nav>
+        )}
       </div>
 
-      {/* Hide scrollbar */}
+      {/* Hide Scrollbar */}
       <style jsx>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
-    </div>
+    </>
   );
 }
