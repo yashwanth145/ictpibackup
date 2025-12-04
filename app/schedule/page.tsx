@@ -137,49 +137,21 @@ export default function MemberSearchPage() {
     setHasSearched(false);
   };
 
-  // SMART NEXT STEP LOGIC — Follows exact order
-  const getNextStep = (): { message: string; link?: string } => {
-    if (!candidate) return { message: "Loading..." };
-
-    // 1. MEPSC Assessment
-    if (candidate.mepsc_assesment !== "Completed") {
-      if (candidate.retest_link) {
-        return { message: "Retake MEPSC Assessment", link: candidate.retest_link };
-      }
-      return { message: "Awaiting MEPSC Assessment" };
-    }
-
-    // 2. Self Test Practice
-    if (candidate.self_test_practice !== "Completed") {
-      return { message: "Complete Self Test Practice", link: "/tests" };
-    }
-
-    // 3. Mock Exam
-    if (candidate.mock_exam !== "Completed") {
-      return { message: "Complete Mock Exam" };
-    }
-
-    // 4. Final CTPR Exam
-    if (candidate.final_ctpr_exam !== "Completed") {
-      return { message: "Appear for Final CTPR Exam" };
-    }
-
-    // All done!
-    return {
-      message: candidate.next_step || "Apply for Fellowship",
-      link: candidate.fellowship_link || undefined,
-    };
-  };
-
-  const nextStep = candidate ? getNextStep() : null;
-
+  // NEW: Check if any step is truly pending (not completed + no link)
   const hasPendingStep = candidate
     ? !(
-        candidate.mepsc_assesment === "Completed" &&
+        (candidate.mepsc_assesment === "Completed" || candidate.retest_link) &&
         candidate.self_test_practice === "Completed" &&
         candidate.mock_exam === "Completed" &&
         candidate.final_ctpr_exam === "Completed"
       )
+    : false;
+
+  const isFullyQualified = candidate
+    ? candidate.mepsc_assesment === "Completed" &&
+      candidate.self_test_practice === "Completed" &&
+      candidate.mock_exam === "Completed" &&
+      candidate.final_ctpr_exam === "Completed"
     : false;
 
   if (!auth || auth.loading)
@@ -198,7 +170,7 @@ export default function MemberSearchPage() {
             <ClipboardList className="w-5 h-5 mr-3" /> Result
           </Link>
           <Link href="/sessions" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-            <ClipboardList className="w-5 h-5 mr-3" /> Sessions
+            <ClipboardList className="w- 5 h-5 mr-3" /> Sessions
           </Link>
           <Link href="/previous" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
             <History className="w-5 h-5 mr-3" /> Previous sessions
@@ -296,7 +268,7 @@ export default function MemberSearchPage() {
               </div>
             )}
 
-            {candidate && nextStep && (
+            {candidate && (
               <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-w-4xl mx-auto">
                 <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-6 text-center">
                   <h2 className="text-2xl md:text-3xl font-bold">Candidate Profile</h2>
@@ -304,6 +276,7 @@ export default function MemberSearchPage() {
                 </div>
 
                 <div className="p-6 md:p-10 space-y-8">
+                  {/* Name & IDs */}
                   <div className="text-center">
                     <p className="text-sm font-medium text-gray-600 uppercase tracking-wider">Full Name</p>
                     <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-3">{candidate.name}</h1>
@@ -339,20 +312,22 @@ export default function MemberSearchPage() {
                     </div>
                   </div>
 
-                  {/* Present Status */}
+                  {/* PRESENT STATUS — NOW RED IF ANYTHING IS PENDING */}
                   <div className="text-center">
                     <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-8">Present Status</h3>
                     <div className="flex justify-center my-8">
                       <span
                         className={`
-                          inline-block px-12 py-5 font-black text-3xl rounded-full shadow-2xl
+                          inline-block px-10 py-4 font-black text-2xl rounded-full shadow-2xl transition-all duration-500
                           ${hasPendingStep
-                            ? "bg-red-600 text-white animate-pulse"
+                            ? "bg-red-600 text-white shadow-red-300"
                             : "bg-green-600 text-white"
                           }
                         `}
                       >
-                        {hasPendingStep ? "IN PROGRESS" : candidate.qualification_status || "QUALIFIED"}
+                        {hasPendingStep
+                          ? "PENDING"
+                          : candidate.qualification_status || "QUALIFIED"}
                       </span>
                     </div>
                   </div>
@@ -385,24 +360,21 @@ export default function MemberSearchPage() {
                     />
                   </div>
 
-                  {/* SMART NEXT STEP */}
                   <div className="mt-12">
-                    <div className={`
-                      text-center py-10 rounded-2xl shadow-2xl text-white font-bold text-3xl
-                      ${nextStep.link ? "bg-gradient-to-r from-blue-600 to-blue-700" : hasPendingStep ? "bg-gradient-to-r from-red-600 to-rose-700" : "bg-gradient-to-r from-green-600 to-emerald-600"}
-                    `}>
-                      <p className="text-lg opacity-90 mb-2">Next Step</p>
-                      {nextStep.link ? (
+                    <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-center py-8 rounded-2xl shadow-2xl">
+                      <p className="text-lg font-medium opacity-90">Next Step</p>
+                      <p className="text-3xl font-bold mt-3">
+                        {hasPendingStep ? "Complete Pending Steps Above" : (candidate.next_step || "Apply for fellowship")}
+                      </p>
+                      {!hasPendingStep && candidate.next_step === "Apply for fellowship" && candidate.fellowship_link && (
                         <a
-                          href={nextStep.link}
-                          target={nextStep.link.startsWith("http") ? "_blank" : "_self"}
-                          rel={nextStep.link.startsWith("http") ? "noopener noreferrer" : undefined}
-                          className="inline-block mt-3 px-8 py-4 bg-blue-600 text-white rounded-xl font-bold text-xl hover:py-5 px-9 transition shadow-lg"
+                          href={candidate.fellowship_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block mt-5 text-xl underline hover:text-green-100 transition"
                         >
-                          {nextStep.message} →
+                          Click here to apply for Fellowship
                         </a>
-                      ) : (
-                        <p className="mt-3">{nextStep.message}</p>
                       )}
                     </div>
                   </div>
@@ -420,7 +392,7 @@ export default function MemberSearchPage() {
   );
 }
 
-// ProgressBox - Perfect Red/Green/Blue Logic
+// ProgressBox — already perfect from previous fix
 function ProgressBox({
   label,
   status,
