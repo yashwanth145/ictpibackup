@@ -137,13 +137,58 @@ export default function MemberSearchPage() {
     setHasSearched(false);
   };
 
+  // SMART NEXT STEP LOGIC — Follows exact order
+  const getNextStep = (): { message: string; link?: string } => {
+    if (!candidate) return { message: "Loading..." };
+
+    // 1. MEPSC Assessment
+    if (candidate.mepsc_assesment !== "Completed") {
+      if (candidate.retest_link) {
+        return { message: "Retake MEPSC Assessment", link: candidate.retest_link };
+      }
+      return { message: "Awaiting MEPSC Assessment" };
+    }
+
+    // 2. Self Test Practice
+    if (candidate.self_test_practice !== "Completed") {
+      return { message: "Complete Self Test Practice", link: "/tests" };
+    }
+
+    // 3. Mock Exam
+    if (candidate.mock_exam !== "Completed") {
+      return { message: "Complete Mock Exam" };
+    }
+
+    // 4. Final CTPR Exam
+    if (candidate.final_ctpr_exam !== "Completed") {
+      return { message: "Appear for Final CTPR Exam" };
+    }
+
+    // All done!
+    return {
+      message: candidate.next_step || "Apply for Fellowship",
+      link: candidate.fellowship_link || undefined,
+    };
+  };
+
+  const nextStep = candidate ? getNextStep() : null;
+
+  const hasPendingStep = candidate
+    ? !(
+        candidate.mepsc_assesment === "Completed" &&
+        candidate.self_test_practice === "Completed" &&
+        candidate.mock_exam === "Completed" &&
+        candidate.final_ctpr_exam === "Completed"
+      )
+    : false;
+
   if (!auth || auth.loading)
     return <p className="text-center mt-10 text-gray-600">Loading...</p>;
   if (!auth.user) return null;
 
   return (
     <div className="flex h-screen bg-gray-100 relative overflow-hidden flex-col md:flex-row">
-      {/* Sidebar */}
+      {/* Sidebar & Mobile Nav - unchanged */}
       <aside className="hidden md:flex w-60 bg-[#0062cc] text-white flex-col">
         <nav className="flex-1 mt-4 space-y-3">
           <Link href="/dashboard" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
@@ -173,7 +218,6 @@ export default function MemberSearchPage() {
         </nav>
       </aside>
 
-      {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0062cc]/95 backdrop-blur-sm text-white flex justify-around items-center py-2 shadow-lg z-50 text-xs">
         <Link href="/dashboard" className="flex flex-col items-center"><LayoutDashboard className="w-5 h-5 mb-1" /> Dashboard</Link>
         <Link href="/results" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> Results</Link>
@@ -184,7 +228,6 @@ export default function MemberSearchPage() {
         <button onClick={handleSignOut} className="flex flex-col items-center"><LogOut className="w-5 h-5 mb-1" /> Logout</button>
       </nav>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-y-auto">
         <header className="flex justify-between items-center bg-white shadow px-4 md:px-6 py-3 sticky top-0 z-40">
           <Image src={logo} alt="Logo" className="h-[60px] w-[60px] md:h-[100px] md:w-[100px]" />
@@ -215,15 +258,11 @@ export default function MemberSearchPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Enter Membership ID"
+                  placeholder="Enter Membership ID or Candidate ID"
                   className="w-full px-5 py-4 pr-12 text-lg rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition text-black"
                 />
                 {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={clearSearch}
-                    className="absolute right-12 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  >
+                  <button type="button" onClick={clearSearch} className="absolute right-12 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
                     <X className="w-5 h-5" />
                   </button>
                 )}
@@ -232,11 +271,7 @@ export default function MemberSearchPage() {
                   disabled={loading}
                   className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg transition disabled:opacity-70"
                 >
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <Search className="w-5 h-5" />
-                  )}
+                  {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Search className="w-5 h-5" />}
                 </button>
               </div>
             </form>
@@ -261,7 +296,7 @@ export default function MemberSearchPage() {
               </div>
             )}
 
-            {candidate && (
+            {candidate && nextStep && (
               <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-w-4xl mx-auto">
                 <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-6 text-center">
                   <h2 className="text-2xl md:text-3xl font-bold">Candidate Profile</h2>
@@ -271,23 +306,17 @@ export default function MemberSearchPage() {
                 <div className="p-6 md:p-10 space-y-8">
                   <div className="text-center">
                     <p className="text-sm font-medium text-gray-600 uppercase tracking-wider">Full Name</p>
-                    <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-3">
-                      {candidate.name}
-                    </h1>
+                    <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-3">{candidate.name}</h1>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
                     <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
                       <p className="text-sm text-gray-600">Membership ID</p>
-                      <p className="text-2xl font-bold text-blue-800 mt-2">
-                        {String(candidate.membership_id).padStart(5, "0")}
-                      </p>
+                      <p className="text-2xl font-bold text-blue-800 mt-2">{String(candidate.membership_id).padStart(5, "0")}</p>
                     </div>
                     <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
                       <p className="text-sm text-gray-600">Candidate ID</p>
-                      <p className="text-2xl font-bold text-blue-800 mt-2">
-                        {candidate.can_id}
-                      </p>
+                      <p className="text-2xl font-bold text-blue-800 mt-2">{candidate.can_id}</p>
                     </div>
                   </div>
 
@@ -296,78 +325,84 @@ export default function MemberSearchPage() {
                       <p className="text-sm text-gray-600">MEPSC Exam Date</p>
                       <p className="text-lg font-semibold text-gray-900 mt-1">
                         {candidate.exam_date
-                          ? new Date(candidate.exam_date).toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "long",
-                              year: "numeric",
-                            })
+                          ? new Date(candidate.exam_date).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })
                           : "--"}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">Place</p>
-                      <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">
-                        {candidate.place || "—"}
-                      </p>
+                      <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">{candidate.place || "—"}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">State</p>
-                      <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">
-                        {candidate.state || "—"}
-                      </p>
+                      <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">{candidate.state || "—"}</p>
                     </div>
                   </div>
 
+                  {/* Present Status */}
                   <div className="text-center">
                     <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-8">Present Status</h3>
                     <div className="flex justify-center my-8">
-                      <span className="inline-block px-12 py-4 bg-green-600 text-white font-bold text-2xl rounded-full shadow-2xl">
-                        {candidate.qualification_status || "Qualified"}
+                      <span
+                        className={`
+                          inline-block px-12 py-5 font-black text-3xl rounded-full shadow-2xl
+                          ${hasPendingStep
+                            ? "bg-red-600 text-white animate-pulse"
+                            : "bg-green-600 text-white"
+                          }
+                        `}
+                      >
+                        {hasPendingStep ? "IN PROGRESS" : candidate.qualification_status || "QUALIFIED"}
                       </span>
                     </div>
                   </div>
 
-                  {/* Progress Boxes with RED for pending */}
+                  {/* Progress Boxes */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
                     <ProgressBox
                       label="MEPSC Assessment"
                       status={candidate.mepsc_assesment === "Completed" ? "Completed" : "Pending"}
                       completed={candidate.mepsc_assesment === "Completed"}
-                      link={candidate.retest_link || undefined}
+                      link={candidate.retest_link || null}
                     />
                     <ProgressBox
                       label="Self Test Practice"
                       status={candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice"}
                       completed={candidate.self_test_practice === "Completed"}
-                      link={candidate.self_test_practice !== "Completed" ? "/tests" : undefined}
+                      link={candidate.self_test_practice === "Completed" ? null : "/tests"}
                     />
                     <ProgressBox
                       label="Mock Exam"
                       status={candidate.mock_exam === "Completed" ? "Completed" : "Pending"}
                       completed={candidate.mock_exam === "Completed"}
+                      link={null}
                     />
                     <ProgressBox
                       label="Final CTPR Exam"
                       status={candidate.final_ctpr_exam === "Completed" ? "Completed" : "Pending"}
                       completed={candidate.final_ctpr_exam === "Completed"}
+                      link={null}
                     />
                   </div>
 
+                  {/* SMART NEXT STEP */}
                   <div className="mt-12">
-                    <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-center py-8 rounded-2xl shadow-2xl">
-                      <p className="text-lg font-medium opacity-90">Next Step</p>
-                      <p className="text-3xl font-bold mt-3">
-                        {candidate.next_step || "Apply for fellowship"}
-                      </p>
-                      {candidate.next_step === "Apply for fellowship" && candidate.fellowship_link && (
+                    <div className={`
+                      text-center py-10 rounded-2xl shadow-2xl text-white font-bold text-3xl
+                      ${nextStep.link ? "bg-gradient-to-r from-blue-600 to-blue-700" : hasPendingStep ? "bg-gradient-to-r from-red-600 to-rose-700" : "bg-gradient-to-r from-green-600 to-emerald-600"}
+                    `}>
+                      <p className="text-lg opacity-90 mb-2">Next Step</p>
+                      {nextStep.link ? (
                         <a
-                          href={candidate.fellowship_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-block mt-5 text-xl underline hover:text-green-100 transition"
+                          href={nextStep.link}
+                          target={nextStep.link.startsWith("http") ? "_blank" : "_self"}
+                          rel={nextStep.link.startsWith("http") ? "noopener noreferrer" : undefined}
+                          className="inline-block mt-3 px-8 py-4 bg-blue-600 text-white rounded-xl font-bold text-xl hover:py-5 px-9 transition shadow-lg"
                         >
-                          Click here to apply for Fellowship
+                          {nextStep.message} →
                         </a>
+                      ) : (
+                        <p className="mt-3">{nextStep.message}</p>
                       )}
                     </div>
                   </div>
@@ -385,7 +420,7 @@ export default function MemberSearchPage() {
   );
 }
 
-// Updated Progress Box with RED for pending
+// ProgressBox - Perfect Red/Green/Blue Logic
 function ProgressBox({
   label,
   status,
@@ -395,36 +430,46 @@ function ProgressBox({
   label: string;
   status: string;
   completed: boolean;
-  link?: string;
+  link?: string | null;
 }) {
-  const isPending = !completed && !link;
-  const hasLink = !!link;
+  const hasActionLink = link && link.trim() !== "";
+  const isPending = !completed && !hasActionLink;
 
   return (
-    <div className="bg-gray-50 border border-gray-300 rounded-xl p-6 text-center hover:shadow-lg transition">
+    <div
+      className={`
+        rounded-xl p-6 text-center transition-all duration-300 shadow-md hover:shadow-xl
+        ${completed
+          ? "bg-green-50 border-2 border-green-500"
+          : hasActionLink
+            ? "bg-blue-50 border-2 border-blue-500"
+            : "bg-red-50 border-2 border-red-600 shadow-lg shadow-red-200 animate-pulse"
+        }
+      `}
+    >
       <div className="flex justify-center mb-4">
         {completed ? (
-          <CheckCircle2 className="w-12 h-12 text-green-600" />
-        ) : hasLink ? (
-          <AlertCircle className="w-12 h-12 text-blue-600 animate-pulse" />
+          <CheckCircle2 className="w-14 h-14 text-green-600" />
+        ) : hasActionLink ? (
+          <AlertCircle className="w-14 h-14 text-blue-600 animate-ping" />
         ) : (
-          <Clock className="w-12 h-12 text-red-600" />
+          <Clock className="w-14 h-14 text-red-600" />
         )}
       </div>
 
-      <p className="text-sm font-medium text-gray-600">{label}</p>
+      <p className="text-sm font-medium text-gray-600 mb-2">{label}</p>
 
-      {hasLink ? (
+      {hasActionLink ? (
         <a
-          href={link}
+          href={link!}
           target="_blank"
           rel="noopener noreferrer"
-          className="block mt-4 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md"
+          className="inline-block mt-4 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md"
         >
           {status} →
         </a>
       ) : (
-        <p className={`mt-4 text-xl font-bold ${completed ? "text-green-600" : "text-red-600"}`}>
+        <p className={`mt-4 text-2xl font-bold ${completed ? "text-green-700" : "text-red-700"}`}>
           {status}
         </p>
       )}
