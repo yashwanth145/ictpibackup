@@ -72,7 +72,9 @@ export default function MemberSearchPage() {
 
   useEffect(() => {
     if (!auth) return;
-    if (!auth.loading && !auth.user) router.push("/");
+    if (!auth.loading && !auth.user){
+       router.push("/");
+    }
   }, [auth, router]);
 
   const handleSignOut = async () => {
@@ -137,31 +139,29 @@ export default function MemberSearchPage() {
     setHasSearched(false);
   };
 
-  // Determine the exact next step in sequence
-  const getNextStepMessage = (c: Candidate): string => {
-    if (!c.mepsc_assesment || c.mepsc_assesment !== "Completed") {
-      return c.retest_link ? "Retake MEPSC Assessment" : "Complete MEPSC Assessment";
-    }
-    if (!c.self_test_practice || c.self_test_practice !== "Completed") {
-      return "Complete Self Test Practice";
-    }
-    if (!c.mock_exam || c.mock_exam !== "Completed") {
-      return "Complete Mock Exam";
-    }
-    if (!c.final_ctpr_exam || c.final_ctpr_exam !== "Completed") {
-      return "Appear for Final CTPR Exam";
-    }
-    return c.next_step === "Apply for fellowship" || !c.next_step ? "Apply for Fellowship" : c.next_step;
+  // Perfect logic: Is anything pending?
+  const hasPendingStep = (c: Candidate): boolean => {
+    if (c.retest_link) return true;
+    if (!c.mepsc_assesment || c.mepsc_assesment !== "Completed") return true;
+    return false;
   };
 
-  const hasPendingStep = candidate
-    ? !(
-        (candidate.mepsc_assesment === "Completed" || candidate.retest_link) &&
-        candidate.self_test_practice === "Completed" &&
-        candidate.mock_exam === "Completed" &&
-        candidate.final_ctpr_exam === "Completed"
-      )
-    : false;
+  const getMepscStatus = (c: Candidate): string => {
+    if (c.retest_link) return "Retake Required";
+    if (c.mepsc_assesment === "Completed") return "MEPSC Passed";
+    return "Pending";
+  };
+
+  const getNextStepMessage = (c: Candidate): string => {
+    if (c.retest_link) return "Retake MEPSC Assessment";
+    if (!c.mepsc_assesment || c.mepsc_assesment !== "Completed") return "Complete MEPSC Assessment";
+    if (c.self_test_practice !== "Completed") return "Complete Self Test Practice";
+    if (c.mock_exam !== "Completed") return "Complete Mock Exam";
+    if (c.final_ctpr_exam !== "Completed") return "Appear for Final CTPR Exam";
+    return "Apply for Fellowship";
+  };
+
+  const pending = candidate ? hasPendingStep(candidate) : false;
 
   if (!auth || auth.loading)
     return <p className="text-center mt-10 text-gray-600">Loading...</p>;
@@ -179,7 +179,7 @@ export default function MemberSearchPage() {
             <ClipboardList className="w-5 h-5 mr-3" /> Result
           </Link>
           <Link href="/sessions" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-            <ClipboardList className="w- 5 h-5 mr-3" /> Sessions
+            <ClipboardList className="w-5 h-5 mr-3" /> Sessions
           </Link>
           <Link href="/previous" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
             <History className="w-5 h-5 mr-3" /> Previous sessions
@@ -285,7 +285,6 @@ export default function MemberSearchPage() {
                 </div>
 
                 <div className="p-6 md:p-10 space-y-8">
-                  {/* Name & IDs */}
                   <div className="text-center">
                     <p className="text-sm font-medium text-gray-600 uppercase tracking-wider">Full Name</p>
                     <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-3">{candidate.name}</h1>
@@ -321,68 +320,77 @@ export default function MemberSearchPage() {
                     </div>
                   </div>
 
-                  {/* PRESENT STATUS */}
+                  {/* PRESENT STATUS – Your Original Beautiful Style Back */}
                   <div className="text-center">
                     <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-8">Present Status</h3>
                     <div className="flex justify-center my-8">
                       <span
                         className={`
                           inline-block px-10 py-4 font-black text-2xl rounded-full shadow-2xl transition-all duration-500
-                          ${hasPendingStep
+                          ${pending
                             ? "bg-red-600 text-white shadow-red-300"
-                            : "bg-green-600 text-white"
+                            : "bg-green-600 text-white shadow-green-300"
                           }
                         `}
                       >
-                        {hasPendingStep ? "PENDING" : candidate.qualification_status || "QUALIFIED"}
+                        {pending
+                          ? "PENDING"
+                          : candidate.qualification_status === "Qualified"
+                            ? "QUALIFIED"
+                            : "MEPSC PASSED"}
                       </span>
                     </div>
+
+                    {/* Optional small retake alert */}
+                    {candidate.retest_link && (
+                      <div className="mt-4 px-6 py-3 bg-orange-100 border border-orange-400 rounded-xl text-orange-800 font-semibold inline-flex items-center gap-2">
+                        <AlertCircle className="w-6 h-6" />
+                        MEPSC Retake Required
+                      </div>
+                    )}
                   </div>
 
                   {/* Progress Boxes */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
                     <ProgressBox
                       label="MEPSC Assessment"
-                      status={candidate.mepsc_assesment === "Completed" ? "Completed" : "Pending"}
+                      status={getMepscStatus(candidate)}
                       completed={candidate.mepsc_assesment === "Completed"}
-                      link={candidate.retest_link || null}
+                      link={candidate.retest_link || undefined}
                     />
                     <ProgressBox
                       label="Self Test Practice"
                       status={candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice"}
                       completed={candidate.self_test_practice === "Completed"}
-                      link={candidate.self_test_practice === "Completed" ? null : "/tests"}
+                      link={candidate.self_test_practice !== "Completed" ? "/tests" : undefined}
                     />
                     <ProgressBox
                       label="Mock Exam"
                       status={candidate.mock_exam === "Completed" ? "Completed" : "Pending"}
                       completed={candidate.mock_exam === "Completed"}
-                      link={null}
                     />
                     <ProgressBox
                       label="Final CTPR Exam"
                       status={candidate.final_ctpr_exam === "Completed" ? "Completed" : "Pending"}
                       completed={candidate.final_ctpr_exam === "Completed"}
-                      link={null}
                     />
                   </div>
 
-                  {/* NEXT STEP - NOW SHOWS EXACT NEXT ACTION */}
+                  {/* Next Step */}
                   <div className="mt-12">
                     <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-center py-8 rounded-2xl shadow-2xl">
                       <p className="text-lg font-medium opacity-90">Next Step</p>
                       <p className="text-3xl font-bold mt-3">
                         {getNextStepMessage(candidate)}
                       </p>
-                      {/* Show fellowship link only when that's the actual next step */}
-                      {!hasPendingStep && candidate.fellowship_link && (
+                      {!pending && candidate.fellowship_link && (
                         <a
                           href={candidate.fellowship_link}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-block mt-5 text-xl underline hover:text-green-100 transition"
                         >
-                          Click here to apply for Fellowship →
+                          Click here to apply for Fellowship
                         </a>
                       )}
                     </div>
@@ -410,10 +418,9 @@ function ProgressBox({
   label: string;
   status: string;
   completed: boolean;
-  link?: string | null;
+  link?: string;
 }) {
-  const hasActionLink = link && link.trim() !== "";
-  const isPending = !completed && !hasActionLink;
+  const showLink = link && link.trim() !== "";
 
   return (
     <div
@@ -421,7 +428,7 @@ function ProgressBox({
         rounded-xl p-6 text-center transition-all duration-300 shadow-md hover:shadow-xl
         ${completed
           ? "bg-green-50 border-2 border-green-500"
-          : hasActionLink
+          : showLink
             ? "bg-blue-50 border-2 border-blue-500"
             : "bg-red-50 border-2 border-red-600 shadow-lg shadow-red-200 animate-pulse"
         }
@@ -430,7 +437,7 @@ function ProgressBox({
       <div className="flex justify-center mb-4">
         {completed ? (
           <CheckCircle2 className="w-14 h-14 text-green-600" />
-        ) : hasActionLink ? (
+        ) : showLink ? (
           <AlertCircle className="w-14 h-14 text-blue-600 animate-ping" />
         ) : (
           <Clock className="w-14 h-14 text-red-600" />
@@ -439,9 +446,9 @@ function ProgressBox({
 
       <p className="text-sm font-medium text-gray-600 mb-2">{label}</p>
 
-      {hasActionLink ? (
+      {showLink ? (
         <a
-          href={link!}
+          href={link}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-block mt-4 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md"
