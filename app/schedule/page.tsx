@@ -87,6 +87,9 @@ export default function MemberSearchPage() {
     }
   };
 
+
+
+
   const getUserDisplayName = () => {
     const userEmail = auth?.user?.email?.toLowerCase();
     if (userEmail && emailToName.has(userEmail)) {
@@ -362,7 +365,7 @@ export default function MemberSearchPage() {
                       label="Self Test Practice"
                       status={candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice"}
                       completed={candidate.self_test_practice === "Completed"}
-                      link={candidate.self_test_practice !== "Completed" ? "/tests" : undefined}
+                      link={candidate.self_test_practice !== "Completed" ?"/tests" : undefined}
                     />
                     <ProgressBox
                       label="Mock Exam"
