@@ -58,6 +58,7 @@ interface Candidate {
 
   retest_link?: string | null;
   fellowship_link?: string | null;
+  new_member_link?: string | null;
 }
 
 export default function MemberSearchPage() {
@@ -72,8 +73,8 @@ export default function MemberSearchPage() {
 
   useEffect(() => {
     if (!auth) return;
-    if (!auth.loading && !auth.user){
-       router.push("/");
+    if (!auth.loading && !auth.user) {
+      router.push("/");
     }
   }, [auth, router]);
 
@@ -86,9 +87,6 @@ export default function MemberSearchPage() {
       console.error("Sign out error:", err);
     }
   };
-
-
-
 
   const getUserDisplayName = () => {
     const userEmail = auth?.user?.email?.toLowerCase();
@@ -115,7 +113,11 @@ export default function MemberSearchPage() {
 
       const { data, error } = await supabase
         .from("candidate_exam_schedule")
-        .select(`*, retest_link`)
+        .select(`
+          *,
+          retest_link,
+          new_member_link
+        `)
         .or(`membership_id.eq.${query},can_id.ilike.${query}`)
         .single();
 
@@ -142,8 +144,8 @@ export default function MemberSearchPage() {
     setHasSearched(false);
   };
 
-  // Perfect logic: Is anything pending?
   const hasPendingStep = (c: Candidate): boolean => {
+    if (c.new_member_link) return true;
     if (c.retest_link) return true;
     if (!c.mepsc_assesment || c.mepsc_assesment !== "Completed") return true;
     return false;
@@ -156,6 +158,7 @@ export default function MemberSearchPage() {
   };
 
   const getNextStepMessage = (c: Candidate): string => {
+    if (c.new_member_link) return "Complete Your Membership Registration First";
     if (c.retest_link) return "Retake MEPSC Assessment";
     if (!c.mepsc_assesment || c.mepsc_assesment !== "Completed") return "Complete MEPSC Assessment";
     if (c.self_test_practice !== "Completed") return "Complete Self Test Practice";
@@ -165,6 +168,7 @@ export default function MemberSearchPage() {
   };
 
   const pending = candidate ? hasPendingStep(candidate) : false;
+  const isNewMemberPending = candidate?.new_member_link ? true : false;
 
   if (!auth || auth.loading)
     return <p className="text-center mt-10 text-gray-600">Loading...</p>;
@@ -172,7 +176,7 @@ export default function MemberSearchPage() {
 
   return (
     <div className="flex h-screen bg-gray-100 relative overflow-hidden flex-col md:flex-row">
-      {/* Sidebar & Mobile Nav - unchanged */}
+      {/* Sidebar */}
       <aside className="hidden md:flex w-60 bg-[#0062cc] text-white flex-col">
         <nav className="flex-1 mt-4 space-y-3">
           <Link href="/dashboard" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
@@ -202,6 +206,7 @@ export default function MemberSearchPage() {
         </nav>
       </aside>
 
+      {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0062cc]/95 backdrop-blur-sm text-white flex justify-around items-center py-2 shadow-lg z-50 text-xs">
         <Link href="/dashboard" className="flex flex-col items-center"><LayoutDashboard className="w-5 h-5 mb-1" /> Dashboard</Link>
         <Link href="/results" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> Results</Link>
@@ -293,17 +298,24 @@ export default function MemberSearchPage() {
                     <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-3">{candidate.name}</h1>
                   </div>
 
+                  {/* Membership ID + Candidate ID (Candidate ID hidden if new_member_link exists) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
                     <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
                       <p className="text-sm text-gray-600">Membership ID</p>
-                      <p className="text-2xl font-bold text-blue-800 mt-2">{String(candidate.membership_id).padStart(5, "0")}</p>
+                      <p className="text-2xl font-bold text-blue-800 mt-2">
+                        {String(candidate.membership_id).padStart(5, "0")}
+                      </p>
                     </div>
-                    <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
-                      <p className="text-sm text-gray-600">Candidate ID</p>
-                      <p className="text-2xl font-bold text-blue-800 mt-2">{candidate.can_id}</p>
-                    </div>
+
+                    {!isNewMemberPending && (
+                      <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
+                        <p className="text-sm text-gray-600">Candidate ID</p>
+                        <p className="text-2xl font-bold text-blue-800 mt-2">{candidate.can_id}</p>
+                      </div>
+                    )}
                   </div>
 
+                  {/* Place, State, Exam Date */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto text-center">
                     <div>
                       <p className="text-sm text-gray-600">MEPSC Exam Date</p>
@@ -323,29 +335,24 @@ export default function MemberSearchPage() {
                     </div>
                   </div>
 
-                  {/* PRESENT STATUS – Your Original Beautiful Style Back */}
+                  {/* Present Status */}
                   <div className="text-center">
                     <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-8">Present Status</h3>
                     <div className="flex justify-center my-8">
                       <span
-                        className={`
-                          inline-block px-10 py-4 font-black text-2xl rounded-full shadow-2xl transition-all duration-500
-                          ${pending
-                            ? "bg-red-600 text-white shadow-red-300"
-                            : "bg-green-600 text-white shadow-green-300"
-                          }
-                        `}
+                        className={`inline-block px-10 py-4 font-black text-2xl rounded-full shadow-2xl transition-all duration-500 ${
+                          pending ? "bg-red-600 text-white shadow-red-300" : "bg-green-600 text-white shadow-green-300"
+                        }`}
                       >
                         {pending
                           ? "PENDING"
                           : candidate.qualification_status === "Qualified"
-                            ? "QUALIFIED"
-                            : "MEPSC PASSED"}
+                          ? "QUALIFIED"
+                          : "MEPSC PASSED"}
                       </span>
                     </div>
 
-                    {/* Optional small retake alert */}
-                    {candidate.retest_link && (
+                    {candidate.retest_link && !isNewMemberPending && (
                       <div className="mt-4 px-6 py-3 bg-orange-100 border border-orange-400 rounded-xl text-orange-800 font-semibold inline-flex items-center gap-2">
                         <AlertCircle className="w-6 h-6" />
                         MEPSC Retake Required
@@ -353,50 +360,84 @@ export default function MemberSearchPage() {
                     )}
                   </div>
 
-                  {/* Progress Boxes */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-                    <ProgressBox
-                      label="MEPSC Assessment"
-                      status={getMepscStatus(candidate)}
-                      completed={candidate.mepsc_assesment === "Completed"}
-                      link={candidate.retest_link || undefined}
-                    />
-                    <ProgressBox
-                      label="Self Test Practice"
-                      status={candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice"}
-                      completed={candidate.self_test_practice === "Completed"}
-                      link={candidate.self_test_practice !== "Completed" ?"/tests" : undefined}
-                    />
-                    <ProgressBox
-                      label="Mock Exam"
-                      status={candidate.mock_exam === "Completed" ? "Completed" : "Pending"}
-                      completed={candidate.mock_exam === "Completed"}
-                    />
-                    <ProgressBox
-                      label="Final CTPR Exam"
-                      status={candidate.final_ctpr_exam === "Completed" ? "Completed" : "Pending"}
-                      completed={candidate.final_ctpr_exam === "Completed"}
-                    />
-                  </div>
+                  {/* Only show progress boxes if membership is NOT pending */}
+                  {!isNewMemberPending && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+                      <ProgressBox
+                        label="MEPSC Assessment"
+                        status={getMepscStatus(candidate)}
+                        completed={candidate.mepsc_assesment === "Completed"}
+                        link={candidate.retest_link || undefined}
+                      />
+                      <ProgressBox
+                        label="Self Test Practice"
+                        status={candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice"}
+                        completed={candidate.self_test_practice === "Completed"}
+                        link={candidate.self_test_practice !== "Completed" ? "/tests" : undefined}
+                      />
+                      <ProgressBox
+                        label="Mock Exam"
+                        status={candidate.mock_exam === "Completed" ? "Completed" : "Pending"}
+                        completed={candidate.mock_exam === "Completed"}
+                      />
+                      <ProgressBox
+                        label="Final CTPR Exam"
+                        status={candidate.final_ctpr_exam === "Completed" ? "Completed" : "Scheduled"}
+                        completed={candidate.final_ctpr_exam === "Completed"}
+                      />
+                    </div>
+                  )}
 
-                  {/* Next Step */}
+                  {/* MAIN ACTION: Membership First or Normal Next Step */}
                   <div className="mt-12">
-                    <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-center py-8 rounded-2xl shadow-2xl">
-                      <p className="text-lg font-medium opacity-90">Next Step</p>
-                      <p className="text-3xl font-bold mt-3">
-                        {getNextStepMessage(candidate)}
-                      </p>
-                      {!pending && candidate.fellowship_link && (
+                    {isNewMemberPending ? (
+                      <div className="bg-gradient-to-r from-indigo-600 to-purple-700 text-white text-center py-16 rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-300">
+                        <p className="text-2xl font-bold mb-6">Important Action Required</p>
+                        <p className="text-3xl font-extrabold mb-10 leading-tight">
+                          Complete Your ICTPL Membership First
+                        </p>
                         <a
-                          href={candidate.fellowship_link}
+                          href={candidate.new_member_link!}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-block mt-5 text-xl underline hover:text-green-100 transition"
+                          className="inline-block px-16 py-8 bg-white text-purple-700 font-bold text-2xl rounded-full hover:bg-gray-100 transition shadow-2xl"
                         >
-                          Click here to apply for Fellowship
+                          Join as Member Now
                         </a>
-                      )}
-                    </div>
+                        <p className="mt-8 text-xl opacity-90">
+                          You must complete official membership before accessing practice or exams
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-center py-8 rounded-2xl shadow-2xl">
+                        <p className="text-lg font-medium opacity-90">Next Step</p>
+                        <p className="text-3xl font-bold mt-3">
+                          {getNextStepMessage(candidate)}
+                        </p>
+
+                        {candidate.retest_link && (
+                          <a
+                            href={candidate.retest_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block mt-5 text-xl underline hover:text-green-100 transition"
+                          >
+                            Click here to Retake MEPSC Assessment
+                          </a>
+                        )}
+
+                        {!pending && candidate.fellowship_link && (
+                          <a
+                            href={candidate.fellowship_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block mt-5 text-xl underline hover:text-green-100 transition"
+                          >
+                            Click here to apply for Fellowship
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
