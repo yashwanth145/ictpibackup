@@ -317,22 +317,25 @@ export default function MemberSearchPage() {
 
                   {/* Place, State, Exam Date */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto text-center">
-                    <div>
+                    {!isNewMemberPending && <div>
                       <p className="text-sm text-gray-600">MEPSC Exam Date</p>
                       <p className="text-lg font-semibold text-gray-900 mt-1">
                         {candidate.exam_date
                           ? new Date(candidate.exam_date).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })
                           : "--"}
                       </p>
-                    </div>
-                    <div>
+                    </div>}
+                    {!isNewMemberPending && <div>
                       <p className="text-sm text-gray-600">Place</p>
                       <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">{candidate.place || "—"}</p>
                     </div>
+                    }
+                    {!isNewMemberPending && 
                     <div>
                       <p className="text-sm text-gray-600">State</p>
                       <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">{candidate.state || "—"}</p>
                     </div>
+                    }
                   </div>
 
                   {/* Present Status */}
