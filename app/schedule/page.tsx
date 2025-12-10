@@ -394,7 +394,7 @@ export default function MemberSearchPage() {
                       <div className="bg-gradient-to-r from-indigo-600 to-purple-700 text-white text-center py-16 rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-300">
                         <p className="text-2xl font-bold mb-6">Important Action Required</p>
                         <p className="text-3xl font-extrabold mb-10 leading-tight">
-                          Complete Your ICTPL Membership First
+                          Complete Your ICTPI EXAM FORM
                         </p>
                         <a
                           href={candidate.new_member_link!}
@@ -402,11 +402,10 @@ export default function MemberSearchPage() {
                           rel="noopener noreferrer"
                           className="inline-block px-16 py-8 bg-white text-purple-700 font-bold text-2xl rounded-full hover:bg-gray-100 transition shadow-2xl"
                         >
-                          Join as Member Now
+                          Click here to complete your exam registration
                         </a>
                         <p className="mt-8 text-xl opacity-90">
-                          You must complete official membership before accessing practice or exams
-                        </p>
+You must complete your exam registration within 13th December 2025                        </p>
                       </div>
                     ) : (
                       <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-center py-8 rounded-2xl shadow-2xl">
