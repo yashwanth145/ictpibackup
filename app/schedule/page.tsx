@@ -144,6 +144,12 @@ export default function MemberSearchPage() {
     setHasSearched(false);
   };
 
+  // Helper: Is the candidate fully qualified?
+  const isFullyQualified = (c: Candidate): boolean => {
+    return c.final_ctpr_exam === "Completed";
+  };
+
+  // Helper: Any pending step?
   const hasPendingStep = (c: Candidate): boolean => {
     if (c.new_member_link) return true;
     if (c.retest_link) return true;
@@ -151,13 +157,18 @@ export default function MemberSearchPage() {
     return false;
   };
 
+  // MEPSC Status
   const getMepscStatus = (c: Candidate): string => {
+    if (isFullyQualified(c)) return "Completed";
     if (c.retest_link) return "Retake Required";
     if (c.mepsc_assesment === "Completed") return "MEPSC Passed";
     return "Pending";
   };
 
+  // Next Step Message
   const getNextStepMessage = (c: Candidate): string => {
+    if (isFullyQualified(c)) return "Congratulations! You have Qualified as CTPR";
+
     if (c.new_member_link) return "Complete Your Membership Registration First";
     if (c.retest_link) return "Retake MEPSC Assessment";
     if (!c.mepsc_assesment || c.mepsc_assesment !== "Completed") return "Complete MEPSC Assessment";
@@ -169,6 +180,7 @@ export default function MemberSearchPage() {
 
   const pending = candidate ? hasPendingStep(candidate) : false;
   const isNewMemberPending = candidate?.new_member_link ? true : false;
+  const fullyQualified = candidate ? isFullyQualified(candidate) : false;
 
   if (!auth || auth.loading)
     return <p className="text-center mt-10 text-gray-600">Loading...</p>;
@@ -298,7 +310,7 @@ export default function MemberSearchPage() {
                     <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-3">{candidate.name}</h1>
                   </div>
 
-                  {/* Membership ID + Candidate ID (Candidate ID hidden if new_member_link exists) */}
+                  {/* Membership ID + Candidate ID */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
                     <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
                       <p className="text-sm text-gray-600">Membership ID</p>
@@ -328,14 +340,12 @@ export default function MemberSearchPage() {
                     {!isNewMemberPending && <div>
                       <p className="text-sm text-gray-600">Place</p>
                       <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">{candidate.place || "—"}</p>
-                    </div>
-                    }
+                    </div>}
                     {!isNewMemberPending && 
                     <div>
                       <p className="text-sm text-gray-600">State</p>
                       <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">{candidate.state || "—"}</p>
-                    </div>
-                    }
+                    </div>}
                   </div>
 
                   {/* Present Status */}
@@ -344,14 +354,18 @@ export default function MemberSearchPage() {
                     <div className="flex justify-center my-8">
                       <span
                         className={`inline-block px-10 py-4 font-black text-2xl rounded-full shadow-2xl transition-all duration-500 ${
-                          pending ? "bg-red-600 text-white shadow-red-300" : "bg-green-600 text-white shadow-green-300"
+                          fullyQualified
+                            ? "bg-green-700 text-white shadow-green-400"
+                            : pending
+                            ? "bg-red-600 text-white shadow-red-300"
+                            : "bg-green-600 text-white shadow-green-300"
                         }`}
                       >
-                        {pending
-                          ? "PENDING"
-                          : candidate.qualification_status === "Qualified"
+                        {fullyQualified
                           ? "QUALIFIED"
-                          : "MEPSC PASSED"}
+                          : pending
+                          ? "PENDING"
+                          : "IN PROGRESS"}
                       </span>
                     </div>
 
@@ -363,25 +377,25 @@ export default function MemberSearchPage() {
                     )}
                   </div>
 
-                  {/* Only show progress boxes if membership is NOT pending */}
+                  {/* Progress Boxes - only if membership not pending */}
                   {!isNewMemberPending && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
                       <ProgressBox
                         label="MEPSC Assessment"
                         status={getMepscStatus(candidate)}
-                        completed={candidate.mepsc_assesment === "Completed"}
-                        link={candidate.retest_link || undefined}
+                        completed={fullyQualified || candidate.mepsc_assesment === "Completed"}
+                        link={fullyQualified ? undefined : candidate.retest_link || undefined}
                       />
                       <ProgressBox
                         label="Self Test Practice"
-                        status={candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice"}
-                        completed={candidate.self_test_practice === "Completed"}
-                        link={candidate.self_test_practice !== "Completed" ? "/tests" : undefined}
+                        status={fullyQualified ? "Completed" : (candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice")}
+                        completed={fullyQualified || candidate.self_test_practice === "Completed"}
+                        link={fullyQualified ? undefined : (candidate.self_test_practice !== "Completed" ? "/tests" : undefined)}
                       />
                       <ProgressBox
                         label="Mock Exam"
-                        status={candidate.mock_exam === "Completed" ? "Completed" : "Pending"}
-                        completed={candidate.mock_exam === "Completed"}
+                        status={fullyQualified ? "Completed" : (candidate.mock_exam === "Completed" ? "Completed" : "Pending")}
+                        completed={fullyQualified || candidate.mock_exam === "Completed"}
                       />
                       <ProgressBox
                         label="Final CTPR Exam"
@@ -391,13 +405,13 @@ export default function MemberSearchPage() {
                     </div>
                   )}
 
-                  {/* MAIN ACTION: Membership First or Normal Next Step */}
+                  {/* MAIN ACTION */}
                   <div className="mt-12">
                     {isNewMemberPending ? (
                       <div className="bg-gradient-to-r from-indigo-600 to-purple-700 text-white text-center py-16 rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-300">
                         <p className="text-2xl font-bold mb-6">Important Action Required</p>
                         <p className="text-3xl font-extrabold mb-10 leading-tight">
-                          Complete Your ICTPI EXAM FORM
+                          Complete Your ICTPI EXAM FORM
                         </p>
                         <a
                           href={candidate.new_member_link!}
@@ -408,16 +422,22 @@ export default function MemberSearchPage() {
                           Click here to complete your exam registration
                         </a>
                         <p className="mt-8 text-xl opacity-90">
-You must complete your exam registration within 13th December 2025                        </p>
+                          You must complete your exam registration within 13th December 2025
+                        </p>
                       </div>
                     ) : (
                       <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-center py-8 rounded-2xl shadow-2xl">
-                        <p className="text-lg font-medium opacity-90">Next Step</p>
                         <p className="text-3xl font-bold mt-3">
                           {getNextStepMessage(candidate)}
                         </p>
 
-                        {candidate.retest_link && (
+                        {fullyQualified && (
+                          <p className="mt-6 text-2xl font-extrabold text-yellow-200">
+                            Congratulations on becoming a Qualified Consultant Chartered Tax Practitioner!
+                          </p>
+                        )}
+
+                        {candidate.retest_link && !fullyQualified && (
                           <a
                             href={candidate.retest_link}
                             target="_blank"
@@ -428,7 +448,7 @@ You must complete your exam registration within 13th December 2025             
                           </a>
                         )}
 
-                        {!pending && candidate.fellowship_link && (
+                        {!pending && !fullyQualified && candidate.fellowship_link && (
                           <a
                             href={candidate.fellowship_link}
                             target="_blank"
