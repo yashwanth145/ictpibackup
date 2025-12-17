@@ -159,7 +159,6 @@ export default function MemberSearchPage() {
 
   // MEPSC Status
   const getMepscStatus = (c: Candidate): string => {
-    if (isFullyQualified(c)) return "Completed";
     if (c.retest_link) return "Retake Required";
     if (c.mepsc_assesment === "Completed") return "MEPSC Passed";
     return "Pending";
@@ -167,8 +166,6 @@ export default function MemberSearchPage() {
 
   // Next Step Message
   const getNextStepMessage = (c: Candidate): string => {
-    if (isFullyQualified(c)) return "Congratulations! You have Qualified as CTPR";
-
     if (c.new_member_link) return "Complete Your Membership Registration First";
     if (c.retest_link) return "Retake MEPSC Assessment";
     if (!c.mepsc_assesment || c.mepsc_assesment !== "Completed") return "Complete MEPSC Assessment";
@@ -329,85 +326,31 @@ export default function MemberSearchPage() {
 
                   {/* Place, State, Exam Date */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto text-center">
-                    {!isNewMemberPending && <div>
-                      <p className="text-sm text-gray-600">MEPSC Exam Date</p>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">
-                        {candidate.exam_date
-                          ? new Date(candidate.exam_date).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })
-                          : "--"}
-                      </p>
-                    </div>}
-                    {!isNewMemberPending && <div>
-                      <p className="text-sm text-gray-600">Place</p>
-                      <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">{candidate.place || "—"}</p>
-                    </div>}
-                    {!isNewMemberPending && 
-                    <div>
-                      <p className="text-sm text-gray-600">State</p>
-                      <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">{candidate.state || "—"}</p>
-                    </div>}
-                  </div>
-
-                  {/* Present Status */}
-                  <div className="text-center">
-                    <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-8">Present Status</h3>
-                    <div className="flex justify-center my-8">
-                      <span
-                        className={`inline-block px-10 py-4 font-black text-2xl rounded-full shadow-2xl transition-all duration-500 ${
-                          fullyQualified
-                            ? "bg-green-700 text-white shadow-green-400"
-                            : pending
-                            ? "bg-red-600 text-white shadow-red-300"
-                            : "bg-green-600 text-white shadow-green-300"
-                        }`}
-                      >
-                        {fullyQualified
-                          ? "QUALIFIED"
-                          : pending
-                          ? "PENDING"
-                          : "IN PROGRESS"}
-                      </span>
-                    </div>
-
-                    {candidate.retest_link && !isNewMemberPending && (
-                      <div className="mt-4 px-6 py-3 bg-orange-100 border border-orange-400 rounded-xl text-orange-800 font-semibold inline-flex items-center gap-2">
-                        <AlertCircle className="w-6 h-6" />
-                        MEPSC Retake Required
-                      </div>
+                    {!isNewMemberPending && (
+                      <>
+                        <div>
+                          <p className="text-sm text-gray-600">MEPSC Exam Date</p>
+                          <p className="text-lg font-semibold text-gray-900 mt-1">
+                            {candidate.exam_date
+                              ? new Date(candidate.exam_date).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })
+                              : "--"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Place</p>
+                          <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">{candidate.place || "—"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">State</p>
+                          <p className="text-lg font-semibold text-gray-900 mt-1 uppercase">{candidate.state || "—"}</p>
+                        </div>
+                      </>
                     )}
                   </div>
 
-                  {/* Progress Boxes - only if membership not pending */}
-                  {!isNewMemberPending && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-                      <ProgressBox
-                        label="MEPSC Assessment"
-                        status={getMepscStatus(candidate)}
-                        completed={fullyQualified || candidate.mepsc_assesment === "Completed"}
-                        link={fullyQualified ? undefined : candidate.retest_link || undefined}
-                      />
-                      <ProgressBox
-                        label="Self Test Practice"
-                        status={fullyQualified ? "Completed" : (candidate.self_test_practice === "Completed" ? "Completed" : "Start Practice")}
-                        completed={fullyQualified || candidate.self_test_practice === "Completed"}
-                        link={fullyQualified ? undefined : (candidate.self_test_practice !== "Completed" ? "/tests" : undefined)}
-                      />
-                      <ProgressBox
-                        label="Mock Exam"
-                        status={fullyQualified ? "Completed" : (candidate.mock_exam === "Completed" ? "Completed" : "Pending")}
-                        completed={fullyQualified || candidate.mock_exam === "Completed"}
-                      />
-                      <ProgressBox
-                        label="Final CTPR Exam"
-                        status={candidate.final_ctpr_exam === "Completed" ? "Completed" : "Scheduled"}
-                        completed={candidate.final_ctpr_exam === "Completed"}
-                      />
-                    </div>
-                  )}
-
-                  {/* MAIN ACTION */}
-                  <div className="mt-12">
-                    {isNewMemberPending ? (
+                  {/* ==== NEW MEMBER PENDING BANNER ==== */}
+                  {isNewMemberPending && (
+                    <div className="mt-12">
                       <div className="bg-gradient-to-r from-indigo-600 to-purple-700 text-white text-center py-16 rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-300">
                         <p className="text-2xl font-bold mb-6">Important Action Required</p>
                         <p className="text-3xl font-extrabold mb-10 leading-tight">
@@ -425,42 +368,10 @@ export default function MemberSearchPage() {
                           You must complete your exam registration within 13th December 2025
                         </p>
                       </div>
-                    ) : (
-                      <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-center py-8 rounded-2xl shadow-2xl">
-                        <p className="text-3xl font-bold mt-3">
-                          {getNextStepMessage(candidate)}
-                        </p>
+                    </div>
+                  )}
 
-                        {fullyQualified && (
-                          <p className="mt-6 text-2xl font-extrabold text-yellow-200">
-                            Congratulations on becoming a Qualified Consultant Chartered Tax Practitioner!
-                          </p>
-                        )}
-
-                        {candidate.retest_link && !fullyQualified && (
-                          <a
-                            href={candidate.retest_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block mt-5 text-xl underline hover:text-green-100 transition"
-                          >
-                            Click here to Retake MEPSC Assessment
-                          </a>
-                        )}
-
-                        {!pending && !fullyQualified && candidate.fellowship_link && (
-                          <a
-                            href={candidate.fellowship_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block mt-5 text-xl underline hover:text-green-100 transition"
-                          >
-                            Click here to apply for Fellowship
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  
                 </div>
 
                 <div className="bg-gray-50 px-8 py-4 text-center text-sm text-gray-600 border-t">
