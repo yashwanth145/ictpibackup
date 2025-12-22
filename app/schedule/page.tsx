@@ -307,8 +307,8 @@ export default function MemberSearchPage() {
                     <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-3">{candidate.name}</h1>
                   </div>
 
-                  {/* Membership ID + Candidate ID */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+                  {/* Membership ID + Candidate ID + Batch ID */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">
                     <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
                       <p className="text-sm text-gray-600">Membership ID</p>
                       <p className="text-2xl font-bold text-blue-800 mt-2">
@@ -317,10 +317,19 @@ export default function MemberSearchPage() {
                     </div>
 
                     {!isNewMemberPending && (
-                      <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
-                        <p className="text-sm text-gray-600">Candidate ID</p>
-                        <p className="text-2xl font-bold text-blue-800 mt-2">{candidate.can_id}</p>
-                      </div>
+                      <>
+                        <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
+                          <p className="text-sm text-gray-600">Candidate ID</p>
+                          <p className="text-2xl font-bold text-blue-800 mt-2">{candidate.can_id}</p>
+                        </div>
+
+                        <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
+                          <p className="text-sm text-gray-600">Batch ID</p>
+                          <p className="text-2xl font-bold text-blue-800 mt-2">
+                            {candidate.batch_id || "—"}
+                          </p>
+                        </div>
+                      </>
                     )}
                   </div>
 
@@ -348,29 +357,7 @@ export default function MemberSearchPage() {
                     )}
                   </div>
 
-                  {/* ==== NEW MEMBER PENDING BANNER ==== */}
-                  {isNewMemberPending && (
-                    <div className="mt-12">
-                      <div className="bg-gradient-to-r from-indigo-600 to-purple-700 text-white text-center py-16 rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-300">
-                        <p className="text-2xl font-bold mb-6">Important Action Required</p>
-                        <p className="text-3xl font-extrabold mb-10 leading-tight">
-                          Complete Your ICTPI EXAM FORM
-                        </p>
-                        <a
-                          href={candidate.new_member_link!}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-block px-16 py-8 bg-white text-purple-700 font-bold text-2xl rounded-full hover:bg-gray-100 transition shadow-2xl"
-                        >
-                          Click here to complete your exam registration
-                        </a>
-                        <p className="mt-8 text-xl opacity-90">
-                          You must complete your exam registration within 13th December 2025
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
+                  
                   
                 </div>
 
@@ -382,61 +369,6 @@ export default function MemberSearchPage() {
           </div>
         </main>
       </div>
-    </div>
-  );
-}
-
-function ProgressBox({
-  label,
-  status,
-  completed,
-  link,
-}: {
-  label: string;
-  status: string;
-  completed: boolean;
-  link?: string;
-}) {
-  const showLink = link && link.trim() !== "";
-
-  return (
-    <div
-      className={`
-        rounded-xl p-6 text-center transition-all duration-300 shadow-md hover:shadow-xl
-        ${completed
-          ? "bg-green-50 border-2 border-green-500"
-          : showLink
-            ? "bg-blue-50 border-2 border-blue-500"
-            : "bg-red-50 border-2 border-red-600 shadow-lg shadow-red-200 animate-pulse"
-        }
-      `}
-    >
-      <div className="flex justify-center mb-4">
-        {completed ? (
-          <CheckCircle2 className="w-14 h-14 text-green-600" />
-        ) : showLink ? (
-          <AlertCircle className="w-14 h-14 text-blue-600 animate-ping" />
-        ) : (
-          <Clock className="w-14 h-14 text-red-600" />
-        )}
-      </div>
-
-      <p className="text-sm font-medium text-gray-600 mb-2">{label}</p>
-
-      {showLink ? (
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block mt-4 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md"
-        >
-          {status} →
-        </a>
-      ) : (
-        <p className={`mt-4 text-2xl font-bold ${completed ? "text-green-700" : "text-red-700"}`}>
-          {status}
-        </p>
-      )}
     </div>
   );
 }
