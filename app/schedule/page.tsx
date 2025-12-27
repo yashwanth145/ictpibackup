@@ -312,7 +312,7 @@ export default function MemberSearchPage() {
                     <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-6 text-center">
                       <p className="text-sm text-gray-600">Membership ID</p>
                       <p className="text-2xl font-bold text-blue-800 mt-2">
-                        {String(candidate.membership_id).padStart(5, "0")}
+                        {String(candidate.membership_id)}
                       </p>
                     </div>
 
