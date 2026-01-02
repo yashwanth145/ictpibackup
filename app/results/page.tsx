@@ -64,11 +64,11 @@ const ResultPage = () => {
       setLoading(true);
       setError(null);
 
-      const userEmail = auth.user.email;
+      const userEmail = auth.user?.email;
       const membershipIdStr = Object.keys(memberMap).find(
         (id) => memberMap[id] === userEmail
       );
-
+//updated
       if (!membershipIdStr) {
         setError("No membership record found for your account.");
         setLoading(false);
