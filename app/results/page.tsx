@@ -12,11 +12,14 @@ import {
   History,
   GraduationCap,
   ClipboardPenLine,
-  Search,
 } from "lucide-react";
 import Image from "next/image";
 import logo from "../../assets/ICTPL_image.png";
 import { supabase } from "@/lib/Supabase";
+
+interface MemberMap {
+  [membershipId: string]: string; // membershipId -> email
+}
 
 interface Candidate {
   membership_id: number;
@@ -32,13 +35,85 @@ const ResultPage = () => {
   const auth = useAuth();
   const router = useRouter();
 
-  const [membershipIdInput, setMembershipIdInput] = useState("");
   const [candidate, setCandidate] = useState<Candidate | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [memberMap, setMemberMap] = useState<MemberMap>({});
 
-  // Redirect unauthenticated users
+  // Load member.json mapping
+  useEffect(() => {
+    async function fetchMembers() {
+      try {
+        const res = await fetch("/member.json");
+        const data = await res.json();
+        setMemberMap(data);
+      } catch (err) {
+        console.error("Error loading member.json:", err);
+        setError("Failed to load member data.");
+        setLoading(false);
+      }
+    }
+    fetchMembers();
+  }, []);
+
+  // Fetch candidate data automatically
+  useEffect(() => {
+    if (!auth?.user || !auth.user.email || Object.keys(memberMap).length === 0) return;
+
+    async function fetchCandidate() {
+      setLoading(true);
+      setError(null);
+
+      const userEmail = auth.user.email;
+      const membershipIdStr = Object.keys(memberMap).find(
+        (id) => memberMap[id] === userEmail
+      );
+
+      if (!membershipIdStr) {
+        setError("No membership record found for your account.");
+        setLoading(false);
+        return;
+      }
+
+      const membershipId = Number(membershipIdStr);
+
+      try {
+        const { data, error: supabaseError } = await supabase
+          .from("candidate_exam_schedule")
+          .select(`
+            membership_id,
+            name,
+            can_id,
+            mepsc_assesment,
+            self_test_practice,
+            mock_exam,
+            final_ctpr_exam
+          `)
+          .eq("membership_id", membershipId)
+          .single();
+
+        if (supabaseError) {
+          if (supabaseError.code === "PGRST116") {
+            setError("No exam results found for your Membership ID.");
+          } else {
+            setError("Failed to load results. Please try again later.");
+            console.error("Supabase error:", supabaseError);
+          }
+        } else if (data) {
+          setCandidate(data);
+        }
+      } catch (err) {
+        setError("Network error. Please check your connection.");
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchCandidate();
+  }, [auth?.user, memberMap]);
+
+  // Redirect if not authenticated
   useEffect(() => {
     if (auth && !auth.loading && !auth.user) {
       router.push("/");
@@ -55,84 +130,51 @@ const ResultPage = () => {
     }
   };
 
-  const searchByMembershipId = async () => {
-    const trimmedInput = membershipIdInput.trim();
-    if (!trimmedInput) {
-      setError("Please enter a Membership ID.");
-      return;
-    }
-
-    const membershipId = Number(trimmedInput);
-    if (isNaN(membershipId)) {
-      setError("Membership ID must be a number.");
-      return;
-    }
-
-    setSearchLoading(true);
-    setError(null);
-    setCandidate(null);
-
-    try {
-      const { data, error: supabaseError } = await supabase
-        .from("candidate_exam_schedule")
-        .select(`
-          membership_id,
-          name,
-          can_id,
-          mepsc_assesment,
-          self_test_practice,
-          mock_exam,
-          final_ctpr_exam
-        `)
-        .eq("membership_id", membershipId)
-        .single();
-
-      if (supabaseError) {
-        if (supabaseError.code === "PGRST116") {
-          setError(`No record found for Membership ID: ${trimmedInput}`);
-        } else {
-          setError("Failed to fetch results. Please try again.");
-          console.error("Supabase error:", supabaseError);
-        }
-      } else if (data) {
-        setCandidate(data);
-      } else {
-        setError("No data returned.");
-      }
-    } catch (err) {
-      setError("Network error. Please check your connection.");
-      console.error("Fetch error:", err);
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
   const getLevelStatus = (field?: string) => {
     const value = field?.trim();
     if (value === "Completed") {
-      return { text: "COMPLETED", color: "bg-green-500" };
+      return { 
+        text: "COMPLETED ✅", 
+        color: "bg-gradient-to-br from-emerald-500 to-teal-600",
+        glow: "shadow-emerald-500/60"
+      };
     }
     if (value === "Yet to Start" || !value) {
-      return { text: "NOT YET STARTED", color: "bg-purple-700" };
+      return { 
+        text: "NOT STARTED 📚", 
+        color: "bg-gradient-to-br from-purple-600 to-indigo-600",
+        glow: "shadow-purple-500/50"
+      };
     }
     if (value === "Scheduled") {
-      return { text: "SCHEDULED", color: "bg-orange-500" };
+      return { 
+        text: "SCHEDULED ⏰", 
+        color: "bg-gradient-to-br from-amber-500 to-orange-500",
+        glow: "shadow-amber-500/60"
+      };
     }
-    if(value ==="Pending"){
-      return { text :"PENDING" , color :"bg-orange-500"}
+    if (value === "Pending") {
+      return { 
+        text: "PENDING ⚠️", 
+        color: "bg-gradient-to-br from-orange-500 to-red-500",
+        glow: "shadow-orange-500/60"
+      };
     }
-    return { text: "NOT COMPLETED", color: "bg-red-600" };
+    return { 
+      text: "NOT COMPLETED ❌", 
+      color: "bg-gradient-to-br from-red-500 to-rose-600",
+      glow: "shadow-red-500/50"
+    };
   };
 
   const getUserDisplayName = () => {
     return auth?.user?.email?.split("@")[0] || "User";
   };
 
-  // Loading state
   if (auth?.loading || loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100">
-        <p className="text-xl text-gray-600">Loading...</p>
+        <p className="text-xl text-gray-600">Loading your results...</p>
       </div>
     );
   }
@@ -191,7 +233,6 @@ const ResultPage = () => {
               <User2 className="w-5 h-5 text-gray-700" />
               <div className="text-sm text-gray-800 text-right">
                 <div className="font-semibold">{getUserDisplayName()}</div>
-                <div className="text-xs text-gray-600">Results Search</div>
               </div>
             </div>
             <button
@@ -205,49 +246,22 @@ const ResultPage = () => {
 
         <main className="flex-1 bg-gray-100 px-4 py-8 md:p-10">
           <div className="max-w-5xl mx-auto">
-            {/* Search Bar */}
-            <div className="mb-10">
-              <h1 className="text-4xl md:text-5xl font-bold text-white bg-blue-600 py-6 rounded-t-2xl shadow-lg text-center">
-                RESULT DASHBOARD
-              </h1>
-
-              <div className="bg-white rounded-b-2xl shadow-lg p-6 -mt-1">
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-center">
-                  <div className="relative flex-1 max-w-md">
-                    <input
-                      type="text"
-                      placeholder="Enter Membership ID"
-                      value={membershipIdInput}
-                      onChange={(e) => setMembershipIdInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && searchByMembershipId()}
-                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
-                    />
-                    <Search className="absolute right-3 top-3.5 w-6 h-6 text-gray-400" />
-                  </div>
-                  <button
-                    onClick={searchByMembershipId}
-                    disabled={searchLoading}
-                    className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-70 disabled:cursor-not-allowed transition flex items-center gap-2"
-                  >
-                    {searchLoading ? "Searching..." : "Search"}
-                    {searchLoading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white bg-blue-600 py-6 rounded-t-2xl shadow-lg text-center mb-8">
+              RESULTS
+            </h1>
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 p-6 rounded-xl text-red-700 text-center mb-8">
-                <p className="text-xl font-bold">Error</p>
-                <p className="mt-2">{error}</p>
+              <div className="bg-red-50 border border-red-200 p-8 rounded-xl text-red-700 text-center mb-12">
+                <p className="text-2xl font-bold">Error</p>
+                <p className="mt-4 text-lg">{error}</p>
               </div>
             )}
 
             {/* Results Display */}
             {candidate && (
               <>
-                {/* Candidate Info */}
+                {/* Candidate Info - Kept Simple & Clean */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                   <div className="bg-blue-600 text-white text-center py-4 rounded-lg shadow">
                     <p className="text-lg font-semibold">NAME</p>
@@ -272,43 +286,71 @@ const ResultPage = () => {
                   </h2>
                 </div>
 
-                {/* Level Boxes */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
-                  <div className={`text-white text-center py-8 rounded-xl shadow-lg ${getLevelStatus(candidate.mepsc_assesment).color}`}>
-                    <p className="text-2xl font-bold">LEVEL - 1</p>
-                    <p className="text-lg mt-2">MEPSC ASSESSMENT</p>
-                    <p className="text-xl font-bold mt-4">{getLevelStatus(candidate.mepsc_assesment).text}</p>
+                {/* LEVEL CARDS ONLY - With Stunning Effects */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+                  {/* Level 1 */}
+                  <div className={`group relative text-white text-center py-12 px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-1000 hover:shadow-3xl hover:-translate-y-8 hover:scale-110 cursor-pointer ${getLevelStatus(candidate.mepsc_assesment).color} ${getLevelStatus(candidate.mepsc_assesment).glow}`}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
+                    <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
+                    <div className="relative z-10">
+                      <p className="text-3xl font-black mb-4 drop-shadow-2xl group-hover:scale-110 transition-transform">LEVEL 1</p>
+                      <p className="text-lg font-semibold mb-6 tracking-wide">MEPSC ASSESSMENT</p>
+                      <p className="text-2xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase">
+                        {getLevelStatus(candidate.mepsc_assesment).text}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className={`text-white text-center py-8 rounded-xl shadow-lg ${getLevelStatus(candidate.self_test_practice).color}`}>
-                    <p className="text-2xl font-bold">LEVEL - 2</p>
-                    <p className="text-lg mt-2">Self Test Practice</p>
-                    <p className="text-xl font-bold mt-4">{getLevelStatus(candidate.self_test_practice).text}</p>
+                  {/* Level 2 */}
+                  <div className={`group relative text-white text-center py-12 px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-1000 hover:shadow-3xl hover:-translate-y-8 hover:scale-110 cursor-pointer delay-100 ${getLevelStatus(candidate.self_test_practice).color} ${getLevelStatus(candidate.self_test_practice).glow}`}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
+                    <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
+                    <div className="relative z-10">
+                      <p className="text-3xl font-black mb-4 drop-shadow-2xl group-hover:scale-110 transition-transform">LEVEL 2</p>
+                      <p className="text-lg font-semibold mb-6 tracking-wide">SELF TEST PRACTICE</p>
+                      <p className="text-2xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase">
+                        {getLevelStatus(candidate.self_test_practice).text}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className={`text-white text-center py-8 rounded-xl shadow-lg ${getLevelStatus(candidate.mock_exam).color}`}>
-                    <p className="text-2xl font-bold">LEVEL - 3</p>
-                    <p className="text-lg mt-2">Mock Exam</p>
-                    <p className="text-xl font-bold mt-4">{getLevelStatus(candidate.mock_exam).text}</p>
+                  {/* Level 3 */}
+                  <div className={`group relative text-white text-center py-12 px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-1000 hover:shadow-3xl hover:-translate-y-8 hover:scale-110 cursor-pointer delay-200 ${getLevelStatus(candidate.mock_exam).color} ${getLevelStatus(candidate.mock_exam).glow}`}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
+                    <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
+                    <div className="relative z-10">
+                      <p className="text-3xl font-black mb-4 drop-shadow-2xl group-hover:scale-110 transition-transform">LEVEL 3</p>
+                      <p className="text-lg font-semibold mb-6 tracking-wide">MOCK EXAM</p>
+                      <p className="text-2xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase">
+                        {getLevelStatus(candidate.mock_exam).text}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className={`text-white text-center py-8 rounded-xl shadow-lg ${getLevelStatus(candidate.final_ctpr_exam).color}`}>
-                    <p className="text-2xl font-bold">LEVEL - 4</p>
-                    <p className="text-lg mt-2">Final CTPR Exam</p>
-                    <p className="text-xl font-bold mt-4">{getLevelStatus(candidate.final_ctpr_exam).text}</p>
+                  {/* Level 4 */}
+                  <div className={`group relative text-white text-center py-12 px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-1000 hover:shadow-3xl hover:-translate-y-8 hover:scale-110 cursor-pointer delay-300 ${getLevelStatus(candidate.final_ctpr_exam).color} ${getLevelStatus(candidate.final_ctpr_exam).glow}`}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
+                    <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
+                    <div className="relative z-10">
+                      <p className="text-3xl font-black mb-4 drop-shadow-2xl group-hover:scale-110 transition-transform">LEVEL 4</p>
+                      <p className="text-lg font-semibold mb-6 tracking-wide">FINAL CTPR EXAM</p>
+                      <p className="text-2xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase">
+                        {getLevelStatus(candidate.final_ctpr_exam).text}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
                 <p className="text-center text-gray-600 mt-10 text-sm">
-                  Data updated as of December 20, 2025
+                  Data updated as of January 02, 2026
                 </p>
               </>
             )}
 
-            {/* Initial State */}
-            {!candidate && !error && !searchLoading && (
+            {/* No Data */}
+            {!candidate && !error && !loading && (
               <div className="text-center py-20">
-                <p className="text-2xl text-gray-600">Enter your Membership ID above to view results</p>
+                <p className="text-2xl text-gray-600">No results available yet.</p>
               </div>
             )}
           </div>
