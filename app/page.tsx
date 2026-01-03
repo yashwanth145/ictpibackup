@@ -70,7 +70,7 @@ export default function LoginPage() {
     try {
       await sendPasswordResetEmail(auth, email, {
         url: `${window.location.origin}/`,
-        handleCodeInApp: true,
+        handleCodeInApp: false,
       });
 
       setResetMessage("Password reset email has been sent to your registered email address.");
