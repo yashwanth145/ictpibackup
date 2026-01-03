@@ -24,7 +24,7 @@ export default function ResetPasswordPage() {
     try {
       await confirmPasswordReset(auth, oobCode, password);
       setSuccess("Password reset successful. Redirecting...");
-      setTimeout(() => router.push("/login"), 2000);
+      setTimeout(() => router.push("/"), 2000);
     } catch (err: any) {
       setError(err.message || "Failed to reset password.");
     }
