@@ -29,6 +29,10 @@ interface Candidate {
   self_test_practice?: string;
   mock_exam?: string;
   final_ctpr_exam?: string;
+  mepsc_certificate_url?: string;
+  self_test_certificate_url?: string;
+  mock_certificate_url?: string;
+  final_ctpr_certificate_url?: string;
 }
 
 const ResultPage = () => {
@@ -68,7 +72,7 @@ const ResultPage = () => {
       const membershipIdStr = Object.keys(memberMap).find(
         (id) => memberMap[id] === userEmail
       );
-//updated
+
       if (!membershipIdStr) {
         setError("No membership record found for your account.");
         setLoading(false);
@@ -87,7 +91,11 @@ const ResultPage = () => {
             mepsc_assesment,
             self_test_practice,
             mock_exam,
-            final_ctpr_exam
+            final_ctpr_exam,
+            mepsc_certificate_url,
+            self_test_certificate_url,
+            mock_certificate_url,
+            final_ctpr_certificate_url
           `)
           .eq("membership_id", membershipId)
           .single();
@@ -161,14 +169,28 @@ const ResultPage = () => {
       };
     }
     return { 
-      text: "NOT COMPLETED ❌", 
-      color: "bg-gradient-to-br from-red-500 to-rose-600",
+      text: "NOT YET STARTED", 
+      color: "bg-gradient-to-br from-purple-800 to-black",
       glow: "shadow-red-500/50"
     };
   };
 
   const getUserDisplayName = () => {
     return auth?.user?.email?.split("@")[0] || "User";
+  };
+
+  const handleDownload = (url: string | undefined, filename: string) => {
+    if (!url) {
+      alert("Certificate is not available yet.");
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (auth?.loading || loading) {
@@ -261,7 +283,7 @@ const ResultPage = () => {
             {/* Results Display */}
             {candidate && (
               <>
-                {/* Candidate Info - Kept Simple & Clean */}
+                {/* Candidate Info */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                   <div className="bg-blue-600 text-white text-center py-4 rounded-lg shadow">
                     <p className="text-lg font-semibold">NAME</p>
@@ -286,63 +308,41 @@ const ResultPage = () => {
                   </h2>
                 </div>
 
-                {/* LEVEL CARDS ONLY - With Stunning Effects */}
+                {/* Level Cards with Download Buttons */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-                  {/* Level 1 */}
-                  <div className={`group relative text-white text-center py-12 px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-1000 hover:shadow-3xl hover:-translate-y-8 hover:scale-110 cursor-pointer ${getLevelStatus(candidate.mepsc_assesment).color} ${getLevelStatus(candidate.mepsc_assesment).glow}`}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
-                    <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
-                    <div className="relative z-10">
-                      <p className="text-3xl font-black mb-4 drop-shadow-2xl group-hover:scale-110 transition-transform">LEVEL 1</p>
-                      <p className="text-lg font-semibold mb-6 tracking-wide">MEPSC ASSESSMENT</p>
-                      <p className="text-2xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase">
-                        {getLevelStatus(candidate.mepsc_assesment).text}
-                      </p>
+                  {[
+                    { level: 1, name: "MEPSC ASSESSMENT", status: candidate.mepsc_assesment, cert: candidate.mepsc_certificate_url },
+                    { level: 2, name: "SELF TEST PRACTICE", status: candidate.self_test_practice, cert: candidate.self_test_certificate_url },
+                    { level: 3, name: "MOCK EXAM", status: candidate.mock_exam, cert: candidate.mock_certificate_url },
+                    { level: 4, name: "FINAL CTPR EXAM", status: candidate.final_ctpr_exam, cert: candidate.final_ctpr_certificate_url },
+                  ].map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={`group relative text-white text-center py-12 px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-1000 hover:shadow-3xl hover:-translate-y-8 hover:scale-105 cursor-pointer delay-${idx * 100} ${getLevelStatus(item.status).color} ${getLevelStatus(item.status).glow}`}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
+                      <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
+                      <div className="relative z-10">
+                        <p className="text-3xl font-black mb-4 drop-shadow-2xl group-hover:scale-105 transition-transform">LEVEL {item.level}</p>
+                        <p className="text-lg font-semibold mb-6 tracking-wide">{item.name}</p>
+                        <p className="text-2xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase mb-6">
+                          {getLevelStatus(item.status).text}
+                        </p>
+                        {item.status?.trim() === "Completed" && item.cert && (
+                          <button
+                            onClick={() => handleDownload(item.cert, `${item.name.replace(/\s/g, "")}_Certificate_${candidate.membership_id}.pdf`)}
+                            className="mt-4 px-6 py-3 bg-white text-blue-700 font-bold rounded-full shadow-lg hover:bg-gray-100 transition transform hover:scale-105"
+                          >
+                            📜 Download Certificate
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Level 2 */}
-                  <div className={`group relative text-white text-center py-12 px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-1000 hover:shadow-3xl hover:-translate-y-8 hover:scale-110 cursor-pointer delay-100 ${getLevelStatus(candidate.self_test_practice).color} ${getLevelStatus(candidate.self_test_practice).glow}`}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
-                    <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
-                    <div className="relative z-10">
-                      <p className="text-3xl font-black mb-4 drop-shadow-2xl group-hover:scale-110 transition-transform">LEVEL 2</p>
-                      <p className="text-lg font-semibold mb-6 tracking-wide">SELF TEST PRACTICE</p>
-                      <p className="text-2xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase">
-                        {getLevelStatus(candidate.self_test_practice).text}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Level 3 */}
-                  <div className={`group relative text-white text-center py-12 px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-1000 hover:shadow-3xl hover:-translate-y-8 hover:scale-110 cursor-pointer delay-200 ${getLevelStatus(candidate.mock_exam).color} ${getLevelStatus(candidate.mock_exam).glow}`}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
-                    <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
-                    <div className="relative z-10">
-                      <p className="text-3xl font-black mb-4 drop-shadow-2xl group-hover:scale-110 transition-transform">LEVEL 3</p>
-                      <p className="text-lg font-semibold mb-6 tracking-wide">MOCK EXAM</p>
-                      <p className="text-2xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase">
-                        {getLevelStatus(candidate.mock_exam).text}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Level 4 */}
-                  <div className={`group relative text-white text-center py-12 px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-1000 hover:shadow-3xl hover:-translate-y-8 hover:scale-110 cursor-pointer delay-300 ${getLevelStatus(candidate.final_ctpr_exam).color} ${getLevelStatus(candidate.final_ctpr_exam).glow}`}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
-                    <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
-                    <div className="relative z-10">
-                      <p className="text-3xl font-black mb-4 drop-shadow-2xl group-hover:scale-110 transition-transform">LEVEL 4</p>
-                      <p className="text-lg font-semibold mb-6 tracking-wide">FINAL CTPR EXAM</p>
-                      <p className="text-2xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase">
-                        {getLevelStatus(candidate.final_ctpr_exam).text}
-                      </p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
                 <p className="text-center text-gray-600 mt-10 text-sm">
-                  Data updated as of January 02, 2026
+                  Data updated as of January 03, 2026
                 </p>
               </>
             )}
