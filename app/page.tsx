@@ -69,7 +69,7 @@ export default function LoginPage() {
 
     try {
       await sendPasswordResetEmail(auth, email, {
-        url: `${window.location.origin}/`,
+        url: `${window.location.origin}/reset-password`,
         handleCodeInApp: false,
       });
 
