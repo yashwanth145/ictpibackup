@@ -69,7 +69,7 @@ export default function LoginPage() {
 
     try {
       await sendPasswordResetEmail(auth, email, {
-        url: `${window.location.origin}/reset-password`,
+  url: "https://ictpiwebsite.vercel.app/reset-password",
         handleCodeInApp: false,
       });
 
