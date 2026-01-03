@@ -70,7 +70,7 @@ export default function LoginPage() {
     try {
       await sendPasswordResetEmail(auth, email, {
   url: "https://ictpiwebsite.vercel.app/reset-password",
-        handleCodeInApp: false,
+        handleCodeInApp: true,
       });
 
       setResetMessage("Password reset email has been sent to your registered email address.");
