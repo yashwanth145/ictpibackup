@@ -17,8 +17,16 @@ import Image from "next/image";
 import logo from "../../assets/ICTPL_image.png";
 import { supabase } from "@/lib/Supabase";
 
+// Import both JSON files statically
+import memberMapData from "@/public/member.json"; // membershipId -> email
+import namesMapData from "@/public/names.json";     // email -> name  (new file)
+
 interface MemberMap {
   [membershipId: string]: string; // membershipId -> email
+}
+
+interface NamesMap {
+  [email: string]: string; // email -> full name
 }
 
 interface Candidate {
@@ -42,35 +50,29 @@ const ResultPage = () => {
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [memberMap, setMemberMap] = useState<MemberMap>({});
+  const [memberMap] = useState<MemberMap>(memberMapData);
+  const [namesMap] = useState<NamesMap>(namesMapData); // Loaded statically
 
-  // Load member.json mapping
+  // Redirect if not authenticated
   useEffect(() => {
-    async function fetchMembers() {
-      try {
-        const res = await fetch("/member.json");
-        const data = await res.json();
-        setMemberMap(data);
-      } catch (err) {
-        console.error("Error loading member.json:", err);
-        setError("Failed to load member data.");
-        setLoading(false);
-      }
+    if (auth && !auth.loading && !auth.user) {
+      router.push("/");
     }
-    fetchMembers();
-  }, []);
+  }, [auth, router]);
 
-  // Fetch candidate data automatically
+  // Fetch candidate data
   useEffect(() => {
-    if (!auth?.user || !auth.user.email || Object.keys(memberMap).length === 0) return;
+    if (!auth?.user?.email || Object.keys(memberMap).length === 0) return;
 
     async function fetchCandidate() {
       setLoading(true);
       setError(null);
 
-      const userEmail = auth.user?.email;
+      const userEmail = auth.user?.email?.toLowerCase().trim();
+
+      // Find membership ID by email (case-insensitive & trimmed)
       const membershipIdStr = Object.keys(memberMap).find(
-        (id) => memberMap[id] === userEmail
+        (id) => memberMap[id].toLowerCase().trim() === userEmail
       );
 
       if (!membershipIdStr) {
@@ -98,35 +100,27 @@ const ResultPage = () => {
             final_ctpr_certificate_url
           `)
           .eq("membership_id", membershipId)
-          .single();
+          .maybeSingle(); // Critical fix: handles no rows gracefully
 
         if (supabaseError) {
-          if (supabaseError.code === "PGRST116") {
-            setError("No exam results found for your Membership ID.");
-          } else {
-            setError("Failed to load results. Please try again later.");
-            console.error("Supabase error:", supabaseError);
-          }
+          console.error("Supabase error:", supabaseError);
+          setError("Failed to load results. Please try again later.");
         } else if (data) {
           setCandidate(data);
+        } else {
+          // No record found
+          setError("No exam results found for your Membership ID.");
         }
       } catch (err) {
+        console.error("Network error:", err);
         setError("Network error. Please check your connection.");
-        console.error("Fetch error:", err);
       } finally {
         setLoading(false);
       }
     }
 
     fetchCandidate();
-  }, [auth?.user, memberMap]);
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (auth && !auth.loading && !auth.user) {
-      router.push("/");
-    }
-  }, [auth, router]);
+  }, [auth?.user?.email, memberMap]);
 
   const handleSignOut = async () => {
     try {
@@ -140,42 +134,40 @@ const ResultPage = () => {
 
   const getLevelStatus = (field?: string) => {
     const value = field?.trim();
-    if (value === "Completed") {
-      return { 
-        text: "COMPLETED ✅", 
+    if (value === "COMPLETED") {
+      return {
+        text: "COMPLETED ✅",
         color: "bg-gradient-to-br from-emerald-500 to-teal-600",
-        glow: "shadow-emerald-500/60"
+        glow: "shadow-emerald-500/60",
       };
     }
-    if (value === "Yet to Start" || !value) {
-      return { 
-        text: "NOT STARTED 📚", 
-        color: "bg-gradient-to-br from-purple-600 to-indigo-600",
-        glow: "shadow-purple-500/50"
-      };
-    }
-    if (value === "Scheduled") {
-      return { 
-        text: "SCHEDULED ⏰", 
+    if (value === "SCHEDULED") {
+      return {
+        text: "SCHEDULED ⏰",
         color: "bg-gradient-to-br from-amber-500 to-orange-500",
-        glow: "shadow-amber-500/60"
+        glow: "shadow-amber-500/60",
       };
     }
-    if (value === "Pending") {
-      return { 
-        text: "PENDING ⚠️", 
+    if (value === "PENDING") {
+      return {
+        text: "PENDING ⚠️",
         color: "bg-gradient-to-br from-orange-500 to-red-500",
-        glow: "shadow-orange-500/60"
+        glow: "shadow-orange-500/60",
       };
     }
-    return { 
-      text: "NOT YET STARTED", 
-      color: "bg-gradient-to-br from-purple-800 to-black",
-      glow: "shadow-red-500/50"
+    return {
+      text: "NOT STARTED 📚",
+      color: "bg-gradient-to-br from-purple-600 to-indigo-600",
+      glow: "shadow-purple-500/50",
     };
   };
 
+  // Updated: Use full name from names.json, fallback to email prefix
   const getUserDisplayName = () => {
+    const userEmail = auth?.user?.email?.toLowerCase().trim();
+    if (userEmail && namesMap[userEmail]) {
+      return namesMap[userEmail];
+    }
     return auth?.user?.email?.split("@")[0] || "User";
   };
 
@@ -286,18 +278,18 @@ const ResultPage = () => {
                 {/* Candidate Info */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                   <div className="bg-blue-600 text-white text-center py-4 rounded-lg shadow">
-                    <p className="text-lg font-semibold">NAME</p>
-                    <p className="text-2xl font-bold mt-2">{candidate.name}</p>
+                    <p className="text-sm font-semibold">NAME</p>
+                    <p className="text-sm font-bold mt-2">{candidate.name}</p>
                   </div>
                   <div className="bg-blue-600 text-white text-center py-4 rounded-lg shadow">
-                    <p className="text-lg font-semibold">MEMBERSHIP ID</p>
-                    <p className="text-2xl font-bold mt-2">
+                    <p className="text-sm font-semibold">MEMBERSHIP ID</p>
+                    <p className="text-sm font-bold mt-2">
                       {String(candidate.membership_id).padStart(5, "0")}
                     </p>
                   </div>
                   <div className="bg-blue-600 text-white text-center py-4 rounded-lg shadow">
-                    <p className="text-lg font-semibold">CANDIDATE ID</p>
-                    <p className="text-2xl font-bold mt-2">{candidate.can_id}</p>
+                    <p className="text-sm font-semibold">CANDIDATE ID</p>
+                    <p className="text-sm font-bold mt-2">{candidate.can_id}</p>
                   </div>
                 </div>
 
@@ -308,7 +300,7 @@ const ResultPage = () => {
                   </h2>
                 </div>
 
-                {/* Level Cards with Download Buttons */}
+                {/* Level Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
                   {[
                     { level: 1, name: "MEPSC ASSESSMENT", status: candidate.mepsc_assesment, cert: candidate.mepsc_certificate_url },
@@ -330,7 +322,7 @@ const ResultPage = () => {
                         </p>
                         {item.status?.trim() === "Completed" && item.cert && (
                           <button
-                            onClick={() => handleDownload(item.cert, `${item.name.replace(/\s/g, "")}_Certificate_${candidate.membership_id}.pdf`)}
+                            onClick={() => handleDownload(item.cert, `${item.name.replace(/\s/g, "_")}_Certificate_${candidate.membership_id}.pdf`)}
                             className="mt-4 px-6 py-3 bg-white text-blue-700 font-bold rounded-full shadow-lg hover:bg-gray-100 transition transform hover:scale-105"
                           >
                             📜 Download Certificate
@@ -342,7 +334,7 @@ const ResultPage = () => {
                 </div>
 
                 <p className="text-center text-gray-600 mt-10 text-sm">
-                  Data updated as of January 03, 2026
+                  Data updated as of January 06, 2026
                 </p>
               </>
             )}
