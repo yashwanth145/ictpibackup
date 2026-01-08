@@ -1,5 +1,4 @@
 "use client";
-
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -16,19 +15,16 @@ import {
 import Image from "next/image";
 import logo from "../../assets/ICTPL_image.png";
 import { supabase } from "@/lib/Supabase";
-
 // Import both JSON files statically
 import memberMapData from "@/public/member.json"; // membershipId -> email
-import namesMapData from "@/public/names.json";     // email -> name  (new file)
+import namesMapData from "@/public/names.json"; // email -> name (new file)
 
 interface MemberMap {
   [membershipId: string]: string; // membershipId -> email
 }
-
 interface NamesMap {
   [email: string]: string; // email -> full name
 }
-
 interface Candidate {
   membership_id: number;
   name: string;
@@ -46,7 +42,6 @@ interface Candidate {
 const ResultPage = () => {
   const auth = useAuth();
   const router = useRouter();
-
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +62,6 @@ const ResultPage = () => {
     async function fetchCandidate() {
       setLoading(true);
       setError(null);
-
       const userEmail = auth.user?.email?.toLowerCase().trim();
 
       // Find membership ID by email (case-insensitive & trimmed)
@@ -100,7 +94,7 @@ const ResultPage = () => {
             final_ctpr_certificate_url
           `)
           .eq("membership_id", membershipId)
-          .maybeSingle(); // Critical fix: handles no rows gracefully
+          .maybeSingle();
 
         if (supabaseError) {
           console.error("Supabase error:", supabaseError);
@@ -108,7 +102,6 @@ const ResultPage = () => {
         } else if (data) {
           setCandidate(data);
         } else {
-          // No record found
           setError("No exam results found for your Membership ID.");
         }
       } catch (err) {
@@ -156,7 +149,7 @@ const ResultPage = () => {
       };
     }
     return {
-      text: "NOT STARTED 📚",
+      text: "COMENCING SOON📚",
       color: "bg-gradient-to-br from-purple-600 to-indigo-600",
       glow: "shadow-purple-500/50",
     };
@@ -310,23 +303,47 @@ const ResultPage = () => {
                   ].map((item, idx) => (
                     <div
                       key={idx}
-                      className={`group relative text-white text-center py-12 px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-1000 hover:shadow-3xl hover:-translate-y-8 hover:scale-105 cursor-pointer delay-${idx * 100} ${getLevelStatus(item.status).color} ${getLevelStatus(item.status).glow}`}
+                      className={`group relative text-white text-center py-12 px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-1000 hover:shadow-3xl hover:-translate-y-8 hover:scale-105 cursor-pointer delay-${idx * 100} ${
+                        item.level === 2
+                          ? "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/60"
+                          : getLevelStatus(item.status).color + " " + getLevelStatus(item.status).glow
+                      }`}
                     >
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
                       <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
                       <div className="relative z-10">
-                        <p className="text-3xl font-black mb-4 drop-shadow-2xl group-hover:scale-105 transition-transform">LEVEL {item.level}</p>
-                        <p className="text-lg font-semibold mb-6 tracking-wide">{item.name}</p>
-                        <p className="text-2xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase mb-6">
-                          {getLevelStatus(item.status).text}
+                        <p className="text-3xl font-black mb-4 drop-shadow-2xl group-hover:scale-105 transition-transform">
+                          LEVEL {item.level}
                         </p>
-                        {item.status?.trim() === "Completed" && item.cert && (
-                          <button
-                            onClick={() => handleDownload(item.cert, `${item.name.replace(/\s/g, "_")}_Certificate_${candidate.membership_id}.pdf`)}
-                            className="mt-4 px-6 py-3 bg-white text-blue-700 font-bold rounded-full shadow-lg hover:bg-gray-100 transition transform hover:scale-105"
+                        <p className="text-lg font-semibold mb-6 tracking-wide">{item.name}</p>
+
+                        {/* Special handling for Self Test Practice (Level 2) */}
+                        {item.level === 2 ? (
+                          <Link
+                            href="/tests"
+                            className="block mt-6 px-8 py-4 bg-white text-indigo-700 font-bold rounded-full shadow-lg hover:bg-gray-100 transition transform hover:scale-105 text-lg"
                           >
-                            📜 Download Certificate
-                          </button>
+                            🚀 Go to Practice Tests
+                          </Link>
+                        ) : (
+                          <>
+                            <p className="text-xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase mb-6">
+                              {getLevelStatus(item.status).text}
+                            </p>
+                            {item.status?.trim() === "COMPLETED" && item.cert && (
+                              <button
+                                onClick={() =>
+                                  handleDownload(
+                                    item.cert,
+                                    `${item.name.replace(/\s/g, "_")}_Certificate_${candidate.membership_id}.pdf`
+                                  )
+                                }
+                                className="mt-4 px-6 py-3 bg-white text-blue-700 font-bold rounded-full shadow-lg hover:bg-gray-100 transition transform hover:scale-105"
+                              >
+                                📜 Download Certificate
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
