@@ -1,15 +1,24 @@
 "use client";
-
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  LayoutDashboard, ClipboardList, History, GraduationCap,
-  ClipboardPenLine, User2, LogOut, Eye, Download, X
+  LayoutDashboard,
+  ClipboardList,
+  History,
+  GraduationCap,
+  ClipboardPenLine,
+  User2,
+  LogOut,
+  Eye,
+  Download,
+  X,
+  ChevronDown,
+  ChevronRight,
+  BookOpen,
 } from "lucide-react";
-
 import logo from "../../assets/ICTPL_image.png";
 import emailNamePairs from "../../public/names.json";
 
@@ -19,12 +28,47 @@ Object.entries(emailNamePairs as Record<string, string>).forEach(([email, name])
   emailToName.set(email.toLowerCase(), name);
 });
 
-// Your Model Papers (Add more as needed)
+// Now these go under ICTPI Materials (collapsible)
+const ictpiMaterials = [
+  {
+    title: "Applied Financial accounting and ethics",
+    src: "/pdf/Indirect Tax Law Compliances.pdf",
+    download: "Applied Financial accounting and ethics.pdf",
+  },
+  {
+    title: "Business Regulatory Laws and compliances",
+    src: "/pdf/Business Regulatory Laws and compliances.pdf",
+    download: "Business Regulatory Laws and compliances.pdf",
+  },
+  {
+    title: "Direct Tax Law Compliances",
+    src: "/pdf/Direct Tax Law Compliances.pdf",
+    download: "Direct Tax Law Compliances.pdf",
+  },
+  {
+    title: "Indirect Tax Law Compliances",
+    src: "/pdf/Indirect Tax Law Compliances.pdf",
+    download: "Indirect Tax Law Compliances.pdf",
+  },
+];
+
+// These are now the main/regular Model Papers (outside collapsible)
 const modelPapers = [
-  { title: "Applied Financial accounting and ethics", src: "/pdf/Indirect Tax Law Compliances.pdf", download: "Applied Financial accounting and ethics" },
-  { title: "Business Regulatory Laws and compliances", src: "/pdf/Business Regulatory Laws and compliances.pdf", download: "Business Regulatory Laws and compliances" },
-  { title: "Direct Tax Law Compliances", src: "/pdf/Direct Tax Law Compliances.pdf", download: "Direct Tax Law Compliances" },
-  { title: "Indirect Tax Law Compliances", src: "/pdf/Indirect Tax Law Compliances.pdf", download: "Indirect Tax Law Compliances" },
+  {
+    title: "CTPr SREEDHARA PARTHASARATHY",
+    src: "/pdf/ictpi/SREEDHARA_PARTHASARATHY.pdf",
+    download: "CTPr_SREEDHARA_PARTHASARATHY.pdf",
+  },
+  {
+    title: "DR. N.SUBRAMANIAN",
+    src: "/pdf/ictpi/DR_N_SUBRAMANIAN.pdf",
+    download: "DR_N_SUBRAMANIAN.pdf",
+  },
+  {
+    title: "CTPr KALYANASUNDARAM BASKARAN",
+    src: "/pdf/ictpi/KALYANASUNDARAM_BASKARAN.pdf",
+    download: "CTPr_KALYANASUNDARAM_BASKARAN.pdf",
+  },
 ];
 
 export default function ModelPaperPage() {
@@ -32,6 +76,7 @@ export default function ModelPaperPage() {
   const router = useRouter();
   const pathname = usePathname();
   const [selectedPdf, setSelectedPdf] = useState<string | null>(null);
+  const [expandedICTPI, setExpandedICTPI] = useState(false);
 
   useEffect(() => {
     if (!auth || auth.loading) return;
@@ -61,10 +106,8 @@ export default function ModelPaperPage() {
   return (
     <>
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
-
         {/* Sidebar - Desktop */}
         <aside className="hidden md:block w-64 bg-[#0062cc] text-white h-screen sticky top-0">
-          
           <nav className="p-4 space-y-2">
             {[
               { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -92,7 +135,7 @@ export default function ModelPaperPage() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <header className="bg-white shadow-md sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
+          <header className="bg-white shadow-md sticky top-0 z-40 px-4 py-2 flex items-center justify-between">
             <Image src={logo} alt="Logo" className="h-16 w-16 md:h-20 md:w-20" />
             <div className="flex items-center gap-4">
               <div className="text-right">
@@ -107,39 +150,89 @@ export default function ModelPaperPage() {
               </button>
             </div>
           </header>
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+                <button
+                  onClick={() => setExpandedICTPI(!expandedICTPI)}
+                  className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-800 text-white hover:bg-blue-700 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <BookOpen className="w-6 h-6" />
+                    <h2 className="text-xl font-bold">ICTPI Materials</h2>
+                  </div>
+                  {expandedICTPI ? <ChevronDown className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
+                </button>
 
-          {/* Model Papers Section */}
-          <main className="flex-1 p-6 md:p-10 pb-24 md:pb-10">
-            <div className="max-w-4xl mx-auto">
-              
-
-              <div className="grid gap-6">
-                {modelPapers.map((paper, index) => (
-                  <div
-                    key={index}
-                    className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all border border-gray-200"
-                  >
-                    <h3 className="text-xl font-bold text-gray-800 mb-4">{paper.title}</h3>
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <button
-                        onClick={() => setSelectedPdf(paper.src)}
-                        className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition"
-                      >
-                        <Eye className="w-5 h-5" />
-                        View PDF
-                      </button>
-                      <a
-                        href={paper.src}
-                        download={paper.download}
-                        className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition text-center"
-                      >
-                        <Download className="w-5 h-5" />
-                        Download
-                      </a>
+                {expandedICTPI && (
+                  <div className="p-6 pt-2 space-y-6 bg-gray-50">
+                    <div className="grid gap-6">
+                      {ictpiMaterials.map((material, index) => (
+                        <div
+                          key={index}
+                          className="bg-white rounded-xl shadow p-6 hover:shadow-xl transition-all border border-gray-200"
+                        >
+                          <h3 className="text-xl font-bold text-gray-800 mb-4">{material.title}</h3>
+                          <div className="flex flex-col sm:flex-row gap-4">
+                            <button
+                              onClick={() => setSelectedPdf(material.src)}
+                              className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition"
+                            >
+                              <Eye className="w-5 h-5" />
+                              View PDF
+                            </button>
+                            <a
+                              href={material.src}
+                              download={material.download}
+                              className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition text-center"
+                            >
+                              <Download className="w-5 h-5" />
+                              Download
+                            </a>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
+                )}
               </div>
+          {/* Model Papers & ICTPI Materials Section */}
+          <main className="flex-1 p-6 md:p-10 pb-24 md:pb-10">
+            <div className="max-w-4xl mx-auto space-y-10">
+              {/* Regular Model Papers (now the 3 CTPr ones) */}
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                  <BookOpen className="w-7 h-7 text-blue-600" />
+                  ARTICLES
+                </h2>
+                <div className="grid gap-6">
+                  {modelPapers.map((paper, index) => (
+                    <div
+                      key={index}
+                      className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all border border-gray-200"
+                    >
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">{paper.title}</h3>
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <button
+                          onClick={() => setSelectedPdf(paper.src)}
+                          className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition"
+                        >
+                          <Eye className="w-5 h-5" />
+                          View PDF
+                        </button>
+                        <a
+                          href={paper.src}
+                          download={paper.download}
+                          className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition text-center"
+                        >
+                          <Download className="w-5 h-5" />
+                          Download
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              
             </div>
           </main>
 
@@ -179,7 +272,7 @@ export default function ModelPaperPage() {
           <div className="fixed inset-0 bg-black bg-opacity-95 z-50 flex flex-col">
             <div className="bg-gray-900 text-white p-4 flex justify-between items-center shadow-xl">
               <h3 className="text-lg font-semibold truncate max-w-2xl">
-                {modelPapers.find(p => p.src === selectedPdf)?.title}
+                {[...ictpiMaterials, ...modelPapers].find((p) => p.src === selectedPdf)?.title}
               </h3>
               <div className="flex gap-3">
                 <a
@@ -209,8 +302,13 @@ export default function ModelPaperPage() {
 
       {/* Hide Scrollbar */}
       <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
       `}</style>
     </>
   );
