@@ -149,6 +149,13 @@ const ResultPage = () => {
         glow: "shadow-orange-500/60",
       };
     }
+    if (value === "FAILED") {
+      return {
+        text: "FAILED ⚠️",
+        color: "bg-gradient-to-br from-red-500 to-red-900",
+        glow: "shadow-red-500/60",
+      };
+    }
     return {
       text: "COMMENCING SOON 📚",
       color: "bg-gradient-to-br from-purple-600 to-indigo-600",
