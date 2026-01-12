@@ -33,6 +33,7 @@ interface Candidate {
   self_test_practice?: string;
   mock_exam?: string;
   final_ctpr_exam?: string;
+  // Certificate fields are kept in type but not used in UI for now
   mepsc_certificate_url?: string;
   self_test_certificate_url?: string;
   mock_certificate_url?: string;
@@ -161,20 +162,6 @@ const ResultPage = () => {
       return namesMap[userEmail];
     }
     return auth?.user?.email?.split("@")[0] || "User";
-  };
-
-  const handleDownload = (url: string | undefined, filename: string) => {
-    if (!url) {
-      alert("Certificate is not available yet.");
-      return;
-    }
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   // Calculate progress
@@ -359,10 +346,10 @@ const ResultPage = () => {
                 {/* Level Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
                   {[
-                    { level: 1, name: "MEPSC ASSESSMENT", status: candidate.mepsc_assesment, cert: candidate.mepsc_certificate_url },
-                    { level: 2, name: "SELF TEST PRACTICE", status: candidate.self_test_practice, cert: candidate.self_test_certificate_url },
-                    { level: 3, name: "MOCK EXAM", status: candidate.mock_exam, cert: candidate.mock_certificate_url },
-                    { level: 4, name: "FINAL CTPR EXAM", status: candidate.final_ctpr_exam, cert: candidate.final_ctpr_certificate_url },
+                    { level: 1, name: "MEPSC ASSESSMENT", status: candidate.mepsc_assesment },
+                    { level: 2, name: "SELF TEST PRACTICE", status: candidate.self_test_practice },
+                    { level: 3, name: "MOCK EXAM", status: candidate.mock_exam },
+                    { level: 4, name: "FINAL CTPR EXAM", status: candidate.final_ctpr_exam },
                   ].map((item, idx) => (
                     <div
                       key={idx}
@@ -376,9 +363,6 @@ const ResultPage = () => {
                       <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
 
                       <div className="relative z-10">
-                        <p className="text-3xl font-black mb-4 drop-shadow-2xl group-hover:scale-105 transition-transform">
-                          LEVEL {item.level}
-                        </p>
                         <p className="text-lg font-semibold mb-6 tracking-wide">{item.name}</p>
 
                         {item.level === 2 ? (
@@ -393,28 +377,6 @@ const ResultPage = () => {
                             <p className="text-xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase mb-6">
                               {getLevelStatus(item.status).text}
                             </p>
-
-                            {/* Download only when fully qualified */}
-                            {isFullyQualified && item.cert && (
-                              <button
-                                onClick={() =>
-                                  handleDownload(
-                                    item.cert,
-                                    `${item.name.replace(/\s/g, "_")}_Certificate_${candidate.membership_id}.pdf`
-                                  )
-                                }
-                                className="mt-4 px-8 py-3 bg-white text-green-700 font-bold rounded-full shadow-lg hover:bg-gray-100 transition transform hover:scale-105"
-                              >
-                                📜 Download Certificate
-                              </button>
-                            )}
-
-                            {/* Hint when level completed but not fully qualified */}
-                            {!isFullyQualified && item.status?.trim().toUpperCase() === "COMPLETED" && item.cert && (
-                              <p className="mt-4 text-sm opacity-80 italic">
-                                Certificate available after completing all levels
-                              </p>
-                            )}
                           </>
                         )}
                       </div>
@@ -423,7 +385,7 @@ const ResultPage = () => {
                 </div>
 
                 <p className="text-center text-gray-600 mt-10 text-sm">
-                  Data updated as of January 10, 2026
+                  Data updated as of January 12, 2026
                 </p>
               </>
             )}

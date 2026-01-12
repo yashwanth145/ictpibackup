@@ -54,21 +54,22 @@ const ictpiMaterials = [
 
 // These are now the main/regular Model Papers (outside collapsible)
 const modelPapers = [
-  {
-    title: "CTPr SREEDHARA PARTHASARATHY",
-    src: "/pdf/ictpi/SREEDHARA_PARTHASARATHY.pdf",
-    download: "CTPr_SREEDHARA_PARTHASARATHY.pdf",
-  },
-  {
-    title: "DR. N.SUBRAMANIAN",
-    src: "/pdf/ictpi/DR_N_SUBRAMANIAN.pdf",
-    download: "DR_N_SUBRAMANIAN.pdf",
-  },
-  {
-    title: "CTPr KALYANASUNDARAM BASKARAN",
-    src: "/pdf/ictpi/KALYANASUNDARAM_BASKARAN.pdf",
-    download: "CTPr_KALYANASUNDARAM_BASKARAN.pdf",
-  },
+  // {
+  //   title: "CTPr SREEDHARA PARTHASARATHY",
+  //   src: "/pdf/ictpi/SREEDHARA_PARTHASARATHY.pdf",
+  //   download: "CTPr_SREEDHARA_PARTHASARATHY.pdf",
+  // },
+  // {
+  //   title: "DR. N.SUBRAMANIAN",
+  //   src: "/pdf/ictpi/DR_N_SUBRAMANIAN.pdf",
+  //   download: "DR_N_SUBRAMANIAN.pdf",
+  // },
+  // {
+  //   title: "CTPr KALYANASUNDARAM BASKARAN",
+  //   src: "/pdf/ictpi/KALYANASUNDARAM_BASKARAN.pdf",
+  //   download: "CTPr_KALYANASUNDARAM_BASKARAN.pdf",
+  // },
+  ,
 ];
 
 export default function ModelPaperPage() {
@@ -201,7 +202,7 @@ export default function ModelPaperPage() {
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
                   <BookOpen className="w-7 h-7 text-blue-600" />
-                  ARTICLES
+                  ARTICLES CONTRIBUTED BY
                 </h2>
                 <div className="grid gap-6">
                   {modelPapers.map((paper, index) => (
