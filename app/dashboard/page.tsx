@@ -180,7 +180,7 @@ export default function Dashboard() {
 
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-100">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:flex w-60 bg-[#0062cc] text-white flex-col">
+        <aside className="hidden md:sticky md:top-0 md:flex md:flex-col md:w-60 md:h-screen md:bg-[#0062cc] md:text-white md:overflow-y-auto">
           <nav className="flex-1 mt-4 space-y-3">
             <Link href="/dashboard" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <LayoutDashboard className="w-5 h-5 mr-3" /> Dashboard
@@ -260,29 +260,44 @@ export default function Dashboard() {
                 </button>
               )}
 
-              {/* Name + User Icon */}
-              <div className="flex items-center gap-2">
-                <User2 className="w-5 h-5 text-gray-700 flex-shrink-0" />
+              <div className="flex items-center gap-4 md:gap-6">
+  {/* Profile Button – clickable area */}
+  <button
+    onClick={() => router.push("/profile")}
+    className="flex items-center gap-2.5 hover:opacity-85 transition-all duration-200 group"
+    title="View your profile"
+  >
+    <div className="bg-blue-50 text-blue-700 rounded-full p-2 group-hover:bg-blue-100 transition-colors">
+      <User2 className="w-5 h-5" />
+    </div>
 
-                {hasSpace ? (
-                  <div className="text-sm text-gray-800 font-semibold leading-none text-center">
-                    <div>{firstName}</div>
-                    {lastName && <div className="text-sm opacity-90">{lastName}</div>}
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-800 font-semibold truncate" title={fullName}>
-                    {fullName}
-                  </div>
-                )}
-              </div>
+    <div className="text-left">
+      {hasSpace ? (
+        <>
+          <div className="text-sm font-semibold text-gray-800 leading-tight">{firstName}</div>
+          {lastName && (
+            <div className="text-xs text-gray-600 opacity-90">{lastName}</div>
+          )}
+        </>
+      ) : (
+        <div className="text-sm font-semibold text-gray-800 truncate max-w-[160px]" title={fullName}>
+          {fullName}
+        </div>
+      )}
+    </div>
+  </button>
 
-              {/* Sign Out Button */}
-              <button
-                onClick={handleSignOut}
-                className="flex items-center gap-2 px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition text-sm whitespace-nowrap"
-              >
-                <LogOut className="w-5 h-5" /> Sign Out
-              </button>
+  {/* Sign Out Button */}
+  <button
+    onClick={handleSignOut}
+    className="hidden sm:flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition text-sm font-medium shadow-sm"
+  >
+    <LogOut className="w-4 h-4" /> Sign Out
+  </button>
+</div>
+
+             
+              
             </div>
           </header>
 
