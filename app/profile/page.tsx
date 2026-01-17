@@ -25,11 +25,13 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import logo from "../../assets/ICTPL_image.png";
-import { supabase } from "@/lib/Supabase";
 
-// Static JSON imports
-import memberMapData from "@/public/member.json";     // membershipId → email
-import namesMapData from "@/public/names.json";       // email → full name
+// Move these JSON files to src/data/ (or adjust path accordingly)
+// Example structure: src/data/member.json and src/data/names.json
+import memberMapData from "@/data/member.json";     // adjust alias/path if needed
+import namesMapData from "@/data/names.json";       // adjust alias/path if needed
+
+import { createClient } from "@supabase/supabase-js";
 
 interface MemberMap {
   [membershipId: string]: string;
@@ -103,6 +105,7 @@ export default function ProfilePage() {
 
     const userEmail = auth.user.email.toLowerCase().trim();
 
+    // Name from map or fallback
     const nameFromMap = namesMap[userEmail];
     const rawName = nameFromMap || userEmail.split("@")[0] || "User";
     setDisplayName(rawName.trim());
@@ -112,6 +115,7 @@ export default function ProfilePage() {
     setLastName(nameParts.slice(1).join(" "));
     setHasSpace(nameParts.length > 1);
 
+    // Find membership ID
     const membershipIdStr = Object.keys(memberMap).find(
       (id) => memberMap[id].toLowerCase().trim() === userEmail
     );
@@ -123,6 +127,12 @@ export default function ProfilePage() {
     }
 
     const membershipId = Number(membershipIdStr);
+
+    // Create Supabase client lazily (inside effect)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
     const fetchProfile = async () => {
       setLoading(true);
@@ -157,7 +167,13 @@ export default function ProfilePage() {
   const handleSignOut = async () => {
     try {
       if (auth?.signOut) await auth.signOut();
+
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
       await supabase.auth.signOut();
+
       router.push("/");
     } catch (err) {
       console.error("Sign out failed:", err);
@@ -273,15 +289,40 @@ export default function ProfilePage() {
                     <User className="w-6 h-6 text-blue-600" />
                     Personal Information
                   </h2>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div><p className="text-sm text-gray-500">Full Name</p><p className="font-medium text-lg">{profile.name || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Display Name</p><p className="font-medium text-lg">{displayName}</p></div>
-                    <div><p className="text-sm text-gray-500">Date of Birth</p><p className="font-medium text-lg">{profile.date_of_birth || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Father's Name</p><p className="font-medium text-lg">{profile.father_name || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Mother's Name</p><p className="font-medium text-lg">{profile.mother_name || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">IT PAN</p><p className="font-medium text-lg font-mono">{profile.it_pan || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Aadhaar Number</p><p className="font-medium text-lg font-mono">{profile.aadhar || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Voter ID</p><p className="font-medium text-lg font-mono">{profile.voter || "—"}</p></div>
+                    <div>
+                      <p className="text-sm text-gray-500">Full Name</p>
+                      <p className="font-medium text-lg">{profile.name || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Display Name</p>
+                      <p className="font-medium text-lg">{displayName}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Date of Birth</p>
+                      <p className="font-medium text-lg">{profile.date_of_birth || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Father's Name</p>
+                      <p className="font-medium text-lg">{profile.father_name || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Mother's Name</p>
+                      <p className="font-medium text-lg">{profile.mother_name || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">IT PAN</p>
+                      <p className="font-medium text-lg font-mono">{profile.it_pan || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Aadhaar Number</p>
+                      <p className="font-medium text-lg font-mono">{profile.aadhar || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Voter ID</p>
+                      <p className="font-medium text-lg font-mono">{profile.voter || "—"}</p>
+                    </div>
                   </div>
                 </section>
 
@@ -291,12 +332,28 @@ export default function ProfilePage() {
                     <MapPin className="w-6 h-6 text-blue-600" />
                     Address & Location
                   </h2>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="md:col-span-2"><p className="text-sm text-gray-500">Full Address</p><p className="font-medium text-lg">{profile.address || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">District</p><p className="font-medium text-lg">{profile.district || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">State</p><p className="font-medium text-lg">{profile.state || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Place</p><p className="font-medium text-lg">{profile.place || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Pincode</p><p className="font-medium text-lg">{profile.pincode || "—"}</p></div>
+                    <div className="md:col-span-2">
+                      <p className="text-sm text-gray-500">Full Address</p>
+                      <p className="font-medium text-lg">{profile.address || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">District</p>
+                      <p className="font-medium text-lg">{profile.district || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">State</p>
+                      <p className="font-medium text-lg">{profile.state || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Place</p>
+                      <p className="font-medium text-lg">{profile.place || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Pincode</p>
+                      <p className="font-medium text-lg">{profile.pincode || "—"}</p>
+                    </div>
                   </div>
                 </section>
 
@@ -306,18 +363,44 @@ export default function ProfilePage() {
                     <Building className="w-6 h-6 text-blue-600" />
                     Batch & Qualification Details
                   </h2>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div><p className="text-sm text-gray-500">Membership ID</p><p className="font-medium text-lg font-mono">{String(profile.membership_id).padStart(5, "0")}</p></div>
-                    <div><p className="text-sm text-gray-500">Candidate ID</p><p className="font-medium text-lg font-mono">{profile.can_id || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Batch ID</p><p className="font-medium text-lg font-mono">{profile.batch_id || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Batch Name</p><p className="font-medium text-lg">{profile.batch_name || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Qualification Status</p><p className="font-medium text-lg font-semibold text-green-700">{profile.qualification_status || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Joined</p><p className="font-medium text-lg">{profile.joined || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Completed</p><p className="font-medium text-lg">{profile.completed || "—"}</p></div>
+                    <div>
+                      <p className="text-sm text-gray-500">Membership ID</p>
+                      <p className="font-medium text-lg font-mono">
+                        {String(profile.membership_id).padStart(5, "0")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Candidate ID</p>
+                      <p className="font-medium text-lg font-mono">{profile.can_id || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Batch ID</p>
+                      <p className="font-medium text-lg font-mono">{profile.batch_id || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Batch Name</p>
+                      <p className="font-medium text-lg">{profile.batch_name || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Qualification Status</p>
+                      <p className="font-medium text-lg font-semibold text-green-700">
+                        {profile.qualification_status || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Joined</p>
+                      <p className="font-medium text-lg">{profile.joined || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Completed</p>
+                      <p className="font-medium text-lg">{profile.completed || "—"}</p>
+                    </div>
                   </div>
                 </section>
 
-                {/* Exam Status & Certificates – FIXED PART */}
+                {/* Exam Status & Certificates */}
                 <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
                   <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
                     <Award className="w-6 h-6 text-blue-600" />
@@ -331,19 +414,25 @@ export default function ProfilePage() {
                       { key: "mock_exam", label: "Mock Exam", urlKey: "mock_certificate_url" },
                       { key: "final_ctpr_exam", label: "Final CTPR Exam", urlKey: "final_ctpr_certificate_url" },
                     ].map((item) => {
-                      // ── Type-safe access ───────────────────────────────────────────────
-                      const status = profile[item.key as 
-                        "mepsc_assesment" | "self_test_practice" | "mock_exam" | "final_ctpr_exam"
+                      // Type narrowing - these fields are string | null
+                      const status = profile[
+                        item.key as
+                          | "mepsc_assesment"
+                          | "self_test_practice"
+                          | "mock_exam"
+                          | "final_ctpr_exam"
                       ] as string | null;
 
-                      const url = profile[item.urlKey as 
-                        "mepsc_certificate_url" | "self_test_certificate_url" | 
-                        "mock_certificate_url" | "final_ctpr_certificate_url"
+                      const url = profile[
+                        item.urlKey as
+                          | "mepsc_certificate_url"
+                          | "self_test_certificate_url"
+                          | "mock_certificate_url"
+                          | "final_ctpr_certificate_url"
                       ] as string | null;
 
                       const isPass = status && /pass|complete|completed/i.test(status);
                       const isFail = status && /fail/i.test(status);
-                      // ──────────────────────────────────────────────────────────────────
 
                       return (
                         <div
@@ -366,7 +455,11 @@ export default function ProfilePage() {
                                   )}
                                   <span
                                     className={`font-medium ${
-                                      isPass ? "text-green-700" : isFail ? "text-red-700" : "text-gray-700"
+                                      isPass
+                                        ? "text-green-700"
+                                        : isFail
+                                        ? "text-red-700"
+                                        : "text-gray-700"
                                     }`}
                                   >
                                     {status}
@@ -408,33 +501,68 @@ export default function ProfilePage() {
                   </h2>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div><p className="text-sm text-gray-500">Exam Date</p><p className="font-medium text-lg">{profile.exam_date || "—"}</p></div>
+                    <div>
+                      <p className="text-sm text-gray-500">Exam Date</p>
+                      <p className="font-medium text-lg">{profile.exam_date || "—"}</p>
+                    </div>
                     <div>
                       <p className="text-sm text-gray-500">Fellowship Link</p>
                       <p className="font-medium text-lg">
                         {profile.fellowship_link ? (
-                          <a href={profile.fellowship_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          <a
+                            href={profile.fellowship_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
                             View Fellowship
                           </a>
-                        ) : "—"}
+                        ) : (
+                          "—"
+                        )}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">New Member Link</p>
                       <p className="font-medium text-lg">
                         {profile.new_member_link ? (
-                          <a href={profile.new_member_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          <a
+                            href={profile.new_member_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
                             View New Member Link
                           </a>
-                        ) : "—"}
+                        ) : (
+                          "—"
+                        )}
                       </p>
                     </div>
-                    <div><p className="text-sm text-gray-500">NCVET</p><p className="font-medium text-lg">{profile.ncvet || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">GSTP</p><p className="font-medium text-lg">{profile.gstp || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">ITP</p><p className="font-medium text-lg">{profile.itp || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">SIDH</p><p className="font-medium text-lg">{profile.sidh || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">STP</p><p className="font-medium text-lg">{profile.stp || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">CB</p><p className="font-medium text-lg">{profile.cb || "—"}</p></div>
+                    <div>
+                      <p className="text-sm text-gray-500">NCVET</p>
+                      <p className="font-medium text-lg">{profile.ncvet || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">GSTP</p>
+                      <p className="font-medium text-lg">{profile.gstp || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">ITP</p>
+                      <p className="font-medium text-lg">{profile.itp || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">SIDH</p>
+                      <p className="font-medium text-lg">{profile.sidh || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">STP</p>
+                      <p className="font-medium text-lg">{profile.stp || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">CB</p>
+                      <p className="font-medium text-lg">{profile.cb || "—"}</p>
+                    </div>
                   </div>
                 </section>
               </>
