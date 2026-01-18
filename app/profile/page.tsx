@@ -167,7 +167,7 @@ export default function ProfilePage() {
   if (auth?.loading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <p className="text-lg text-gray-600 animate-pulse">Loading profile...</p>
+        <p className="text-lg text-black animate-pulse">Loading profile...</p>
       </div>
     );
   }
@@ -224,10 +224,10 @@ export default function ProfilePage() {
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white shadow px-4 md:px-6 py-4 sticky top-0 z-40 gap-4">
           <div className="flex items-center gap-4 w-full md:w-auto">
             <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <ArrowLeft className="w-6 h-6 text-gray-700" />
+              <ArrowLeft className="w-6 h-6 text-black" />
             </button>
             <Image src={logo} alt="Logo" className="h-[60px] w-[60px] md:h-[80px] md:w-[80px]" />
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800">Profile</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-black">Profile</h1>
           </div>
 
           <div className="flex items-center gap-5 md:gap-6 w-full md:w-auto justify-end">
@@ -238,11 +238,11 @@ export default function ProfilePage() {
               <div className="text-left">
                 {hasSpace ? (
                   <>
-                    <div className="text-sm font-semibold text-gray-800 leading-tight">{firstName}</div>
-                    {lastName && <div className="text-xs text-gray-600 opacity-90">{lastName}</div>}
+                    <div className="text-sm font-semibold text-black leading-tight">{firstName}</div>
+                    {lastName && <div className="text-xs text-black opacity-90">{lastName}</div>}
                   </>
                 ) : (
-                  <div className="text-sm font-semibold text-gray-800 truncate max-w-[160px]" title={displayName}>
+                  <div className="text-sm font-semibold text-black truncate max-w-[160px]" title={displayName}>
                     {displayName}
                   </div>
                 )}
@@ -269,57 +269,57 @@ export default function ProfilePage() {
               <>
                 {/* Personal Information */}
                 <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
                     <User className="w-6 h-6 text-blue-600" />
                     Personal Information
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div><p className="text-sm text-gray-500">Full Name</p><p className="font-medium text-lg">{profile.name || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Display Name</p><p className="font-medium text-lg">{displayName}</p></div>
-                    <div><p className="text-sm text-gray-500">Date of Birth</p><p className="font-medium text-lg">{profile.date_of_birth || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Father's Name</p><p className="font-medium text-lg">{profile.father_name || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Mother's Name</p><p className="font-medium text-lg">{profile.mother_name || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">IT PAN</p><p className="font-medium text-lg font-mono">{profile.it_pan || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Aadhaar Number</p><p className="font-medium text-lg font-mono">{profile.aadhar || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Voter ID</p><p className="font-medium text-lg font-mono">{profile.voter || "—"}</p></div>
+                    <div><p className="text-sm text-black">Full Name</p><p className="font-medium text-lg">{profile.name || "—"}</p></div>
+                    <div><p className="text-sm text-black">Display Name</p><p className="font-medium text-lg">{displayName}</p></div>
+                    <div><p className="text-sm text-black">Date of Birth</p><p className="font-medium text-lg">{profile.date_of_birth || "—"}</p></div>
+                    <div><p className="text-sm text-black">Father's Name</p><p className="font-medium text-lg">{profile.father_name || "—"}</p></div>
+                    <div><p className="text-sm text-black">Mother's Name</p><p className="font-medium text-lg">{profile.mother_name || "—"}</p></div>
+                    <div><p className="text-sm text-black">IT PAN</p><p className="font-medium text-lg font-mono">{profile.it_pan || "—"}</p></div>
+                    <div><p className="text-sm text-black">Aadhaar Number</p><p className="font-medium text-lg font-mono">{profile.aadhar || "—"}</p></div>
+                    <div><p className="text-sm text-black">Voter ID</p><p className="font-medium text-lg font-mono">{profile.voter || "—"}</p></div>
                   </div>
                 </section>
 
                 {/* Address Information */}
                 <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
                     <MapPin className="w-6 h-6 text-blue-600" />
                     Address & Location
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="md:col-span-2"><p className="text-sm text-gray-500">Full Address</p><p className="font-medium text-lg">{profile.address || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">District</p><p className="font-medium text-lg">{profile.district || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">State</p><p className="font-medium text-lg">{profile.state || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Place</p><p className="font-medium text-lg">{profile.place || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Pincode</p><p className="font-medium text-lg">{profile.pincode || "—"}</p></div>
+                    <div className="md:col-span-2"><p className="text-sm text-black">Full Address</p><p className="font-medium text-lg">{profile.address || "—"}</p></div>
+                    <div><p className="text-sm text-black">District</p><p className="font-medium text-lg">{profile.district || "—"}</p></div>
+                    <div><p className="text-sm text-black">State</p><p className="font-medium text-lg">{profile.state || "—"}</p></div>
+                    <div><p className="text-sm text-black">Place</p><p className="font-medium text-lg">{profile.place || "—"}</p></div>
+                    <div><p className="text-sm text-black">Pincode</p><p className="font-medium text-lg">{profile.pincode || "—"}</p></div>
                   </div>
                 </section>
 
                 {/* Batch & Qualification */}
                 <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
                     <Building className="w-6 h-6 text-blue-600" />
                     Batch & Qualification Details
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div><p className="text-sm text-gray-500">Membership ID</p><p className="font-medium text-lg font-mono">{String(profile.membership_id).padStart(5, "0")}</p></div>
-                    <div><p className="text-sm text-gray-500">Candidate ID</p><p className="font-medium text-lg font-mono">{profile.can_id || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Batch ID</p><p className="font-medium text-lg font-mono">{profile.batch_id || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Batch Name</p><p className="font-medium text-lg">{profile.batch_name || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Qualification Status</p><p className="font-medium text-lg font-semibold text-green-700">{profile.qualification_status || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Joined</p><p className="font-medium text-lg">{profile.joined || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">Completed</p><p className="font-medium text-lg">{profile.completed || "—"}</p></div>
+                    <div><p className="text-sm text-black">Membership ID</p><p className="font-medium text-lg font-mono">{String(profile.membership_id).padStart(5, "0")}</p></div>
+                    <div><p className="text-sm text-black">Candidate ID</p><p className="font-medium text-lg font-mono">{profile.can_id || "—"}</p></div>
+                    <div><p className="text-sm text-black">Batch ID</p><p className="font-medium text-lg font-mono">{profile.batch_id || "—"}</p></div>
+                    <div><p className="text-sm text-black">Batch Name</p><p className="font-medium text-lg">{profile.batch_name || "—"}</p></div>
+                    <div><p className="text-sm text-black">Qualification Status</p><p className="font-medium text-lg font-semibold text-green-700">{profile.qualification_status || "—"}</p></div>
+                    <div><p className="text-sm text-black">Joined</p><p className="font-medium text-lg">{profile.joined || "—"}</p></div>
+                    <div><p className="text-sm text-black">Completed</p><p className="font-medium text-lg">{profile.completed || "—"}</p></div>
                   </div>
                 </section>
 
                 {/* Exam Status & Certificates – FIXED PART */}
                 <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
                     <Award className="w-6 h-6 text-blue-600" />
                     Exam Status & Certificates
                   </h2>
@@ -350,11 +350,11 @@ export default function ProfilePage() {
                           key={item.key}
                           className="border rounded-xl p-6 hover:shadow-md transition-all bg-gray-50/60"
                         >
-                          <h3 className="font-semibold text-gray-800 mb-4 text-lg">{item.label}</h3>
+                          <h3 className="font-semibold text-black mb-4 text-lg">{item.label}</h3>
 
                           <div className="space-y-3">
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">Status:</span>
+                              <span className="text-sm text-black">Status:</span>
                               {status ? (
                                 <div className="flex items-center gap-2">
                                   {isPass ? (
@@ -366,19 +366,19 @@ export default function ProfilePage() {
                                   )}
                                   <span
                                     className={`font-medium ${
-                                      isPass ? "text-green-700" : isFail ? "text-red-700" : "text-gray-700"
+                                      isPass ? "text-green-700" : isFail ? "text-red-700" : "text-black"
                                     }`}
                                   >
                                     {status}
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-gray-500">Not attempted</span>
+                                <span className="text-black">Not attempted</span>
                               )}
                             </div>
 
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">Certificate:</span>
+                              <span className="text-sm text-black">Certificate:</span>
                               {url ? (
                                 <a
                                   href={url}
@@ -390,7 +390,7 @@ export default function ProfilePage() {
                                   View / Download
                                 </a>
                               ) : (
-                                <span className="text-gray-500">Not available</span>
+                                <span className="text-black">Not available</span>
                               )}
                             </div>
                           </div>
@@ -402,15 +402,15 @@ export default function ProfilePage() {
 
                 {/* Additional Links & Info */}
                 <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
                     <BookOpen className="w-6 h-6 text-blue-600" />
                     Additional Information & Links
                   </h2>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div><p className="text-sm text-gray-500">Exam Date</p><p className="font-medium text-lg">{profile.exam_date || "—"}</p></div>
+                    <div><p className="text-sm text-black">Exam Date</p><p className="font-medium text-lg">{profile.exam_date || "—"}</p></div>
                     <div>
-                      <p className="text-sm text-gray-500">Fellowship Link</p>
+                      <p className="text-sm text-black">Fellowship Link</p>
                       <p className="font-medium text-lg">
                         {profile.fellowship_link ? (
                           <a href={profile.fellowship_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
@@ -420,7 +420,7 @@ export default function ProfilePage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">New Member Link</p>
+                      <p className="text-sm text-black">New Member Link</p>
                       <p className="font-medium text-lg">
                         {profile.new_member_link ? (
                           <a href={profile.new_member_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
@@ -429,12 +429,12 @@ export default function ProfilePage() {
                         ) : "—"}
                       </p>
                     </div>
-                    <div><p className="text-sm text-gray-500">NCVET</p><p className="font-medium text-lg">{profile.ncvet || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">GSTP</p><p className="font-medium text-lg">{profile.gstp || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">ITP</p><p className="font-medium text-lg">{profile.itp || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">SIDH</p><p className="font-medium text-lg">{profile.sidh || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">STP</p><p className="font-medium text-lg">{profile.stp || "—"}</p></div>
-                    <div><p className="text-sm text-gray-500">CB</p><p className="font-medium text-lg">{profile.cb || "—"}</p></div>
+                    <div><p className="text-sm text-black">NCVET</p><p className="font-medium text-lg">{profile.ncvet || "—"}</p></div>
+                    <div><p className="text-sm text-black">GSTP</p><p className="font-medium text-lg">{profile.gstp || "—"}</p></div>
+                    <div><p className="text-sm text-black">ITP</p><p className="font-medium text-lg">{profile.itp || "—"}</p></div>
+                    <div><p className="text-sm text-black">SIDH</p><p className="font-medium text-lg">{profile.sidh || "—"}</p></div>
+                    <div><p className="text-sm text-black">STP</p><p className="font-medium text-lg">{profile.stp || "—"}</p></div>
+                    <div><p className="text-sm text-black">CB</p><p className="font-medium text-lg">{profile.cb || "—"}</p></div>
                   </div>
                 </section>
               </>
