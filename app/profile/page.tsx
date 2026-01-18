@@ -268,7 +268,7 @@ export default function ProfilePage() {
             ) : profile ? (
               <>
                 {/* Personal Information */}
-                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8 text-black">
                   <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
                     <User className="w-6 h-6 text-blue-600" />
                     Personal Information
@@ -286,7 +286,7 @@ export default function ProfilePage() {
                 </section>
 
                 {/* Address Information */}
-                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8 text-black">
                   <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
                     <MapPin className="w-6 h-6 text-blue-600" />
                     Address & Location
@@ -301,7 +301,7 @@ export default function ProfilePage() {
                 </section>
 
                 {/* Batch & Qualification */}
-                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8 text-black">
                   <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
                     <Building className="w-6 h-6 text-blue-600" />
                     Batch & Qualification Details
@@ -318,7 +318,7 @@ export default function ProfilePage() {
                 </section>
 
                 {/* Exam Status & Certificates – FIXED PART */}
-                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8 text-black">
                   <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
                     <Award className="w-6 h-6 text-blue-600" />
                     Exam Status & Certificates
@@ -401,7 +401,7 @@ export default function ProfilePage() {
                 </section>
 
                 {/* Additional Links & Info */}
-                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8 text-black">
                   <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
                     <BookOpen className="w-6 h-6 text-blue-600" />
                     Additional Information & Links
