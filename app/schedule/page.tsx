@@ -114,7 +114,7 @@ export default function MyExamSchedulePage() {
             self_test_practice,
             mock_exam,
             final_ctpr_exam,
-            retest_link,
+            
             fellowship_link,
             new_member_link
           `)

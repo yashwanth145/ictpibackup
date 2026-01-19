@@ -40,6 +40,8 @@ interface Candidate {
   final_ctpr_certificate_url?: string;
 }
 
+const MOCK_EXAM_LINK = "https://test.tallyeducation.com/links/a4ffec55-f3a8-11f0-8447-0ac472d4f9eb/";
+
 const ResultPage = () => {
   const auth = useAuth();
   const router = useRouter();
@@ -161,6 +163,23 @@ const ResultPage = () => {
       color: "bg-gradient-to-br from-purple-600 to-indigo-600",
       glow: "shadow-purple-500/50",
     };
+  };
+
+  const getMockExamDisplay = (status?: string) => {
+    const upper = status?.trim().toUpperCase();
+    if (upper === "COMPLETED") {
+      return getLevelStatus(status);
+    }
+    // Show "IN PROGRESS" if there's any value but not completed (customize condition as needed)
+    if (upper && upper !== "") {
+      return {
+        text: "MOCK EXAM IN PROGRESS ⏳",
+        color: "bg-gradient-to-br from-blue-500 to-cyan-600",
+        glow: "shadow-blue-500/60",
+      };
+    }
+    // Default for not started
+    return getLevelStatus(status);
   };
 
   const getUserDisplayName = () => {
@@ -357,42 +376,56 @@ const ResultPage = () => {
                     { level: 2, name: "SELF TEST PRACTICE", status: candidate.self_test_practice },
                     { level: 3, name: "MOCK EXAM", status: candidate.mock_exam },
                     { level: 4, name: "FINAL CTPR EXAM", status: candidate.final_ctpr_exam },
-                  ].map((item, idx) => (
-                    <div
-                      key={idx}
-                      className={`group relative text-white text-center py-12 px-6 md:px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-700 hover:shadow-3xl hover:-translate-y-8 hover:scale-105 cursor-pointer ${
-                        item.level === 2
-                          ? "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/60"
-                          : getLevelStatus(item.status).color + " " + getLevelStatus(item.status).glow
-                      }`}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
-                      <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
+                  ].map((item, idx) => {
+                    const isMock = item.level === 3;
+                    const statusInfo = isMock
+                      ? getMockExamDisplay(item.status)
+                      : getLevelStatus(item.status);
 
-                      <div className="relative z-10">
-                        <p className="text-lg font-semibold mb-6 tracking-wide">{item.name}</p>
+                    return (
+                      <div
+                        key={idx}
+                        className={`group relative text-white text-center py-12 px-6 md:px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-700 hover:shadow-3xl hover:-translate-y-8 hover:scale-105 cursor-pointer ${
+                          item.level === 2
+                            ? "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/60"
+                            : statusInfo.color + " " + statusInfo.glow
+                        }`}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
+                        <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
 
-                        {item.level === 2 ? (
-                          <Link
-                            href="/tests"
-                            className="block mt-4 px-6 py-3 bg-white text-indigo-700 font-bold rounded-full shadow-lg hover:bg-gray-100 transition transform hover:scale-105 text-base"
-                          >
-                            Go to Practice Tests
-                          </Link>
-                        ) : (
-                          <>
+                        <div className="relative z-10">
+                          <p className="text-lg font-semibold mb-6 tracking-wide">{item.name}</p>
+
+                          {item.level === 2 ? (
+                            <Link
+                              href="/tests"
+                              className="block mt-4 px-6 py-3 bg-white text-indigo-700 font-bold rounded-full shadow-lg hover:bg-gray-100 transition transform hover:scale-105 text-base"
+                            >
+                              Go to Practice Tests
+                            </Link>
+                          ) : isMock && statusInfo.text !== "COMPLETED ✅" ? (
+                            <a
+                              href={MOCK_EXAM_LINK}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block mt-2 px-3 py-3 bg-white text-red-700 font-bold rounded-full shadow-lg hover:bg-gray-100 transition transform hover:scale-105 text-base"
+                            >
+                              Attend, if schedule
+                            </a>
+                          ) : (
                             <p className="text-xl font-black drop-shadow-2xl group-hover:scale-125 transition-all duration-500 uppercase mb-6">
-                              {getLevelStatus(item.status).text}
+                              {statusInfo.text}
                             </p>
-                          </>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <p className="text-center text-gray-600 mt-10 text-sm">
-                  Data updated as of January 12, 2026
+                  Data updated as of January 19, 2026
                 </p>
               </>
             )}
