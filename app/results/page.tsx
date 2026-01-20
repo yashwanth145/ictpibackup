@@ -16,14 +16,14 @@ import Image from "next/image";
 import logo from "../../assets/ICTPL_image.png";
 import { supabase } from "@/lib/Supabase";
 // Import both JSON files statically
-import memberMapData from "@/public/member.json"; // membershipId -> email
-import namesMapData from "@/public/names.json"; // email -> name
+import memberMapData from "@/public/member.json"; // membershipId → email
+import namesMapData from "@/public/names.json"; // email → name
 
 interface MemberMap {
-  [membershipId: string]: string; // membershipId -> email
+  [membershipId: string]: string; // membershipId → email
 }
 interface NamesMap {
-  [email: string]: string; // email -> full name
+  [email: string]: string; // email → full name
 }
 interface Candidate {
   membership_id: number;
@@ -166,20 +166,41 @@ const ResultPage = () => {
   };
 
   const getMockExamDisplay = (status?: string) => {
-    const upper = status?.trim().toUpperCase();
-    if (upper === "COMPLETED") {
-      return getLevelStatus(status);
-    }
-    // Show "IN PROGRESS" if there's any value but not completed (customize condition as needed)
-    if (upper && upper !== "") {
+    // Not started / empty
+    if (!status || status.trim() === "") {
       return {
-        text: "MOCK EXAM IN PROGRESS ⏳",
-        color: "bg-gradient-to-br from-blue-500 to-cyan-600",
-        glow: "shadow-blue-500/60",
+        text: "COMMENCING SOON 📚",
+        color: "bg-gradient-to-br from-purple-600 to-indigo-600",
+        glow: "shadow-purple-500/50",
       };
     }
-    // Default for not started
-    return getLevelStatus(status);
+
+    const value = status.trim().toUpperCase();
+
+    // Completed
+    if (value === "COMPLETED") {
+      return {
+        text: "COMPLETED ✅",
+        color: "bg-gradient-to-br from-emerald-500 to-teal-600",
+        glow: "shadow-emerald-500/60",
+      };
+    }
+
+    // Failed (if your backend writes this)
+    if (value === "FAILED") {
+      return {
+        text: "FAILED ⚠️",
+        color: "bg-gradient-to-br from-red-500 to-red-900",
+        glow: "shadow-red-500/60",
+      };
+    }
+
+    // Any other non-empty value → in progress
+    return {
+      text: "MOCK EXAM IN PROGRESS ⏳",
+      color: "bg-gradient-to-br from-blue-500 to-cyan-600",
+      glow: "shadow-blue-500/60",
+    };
   };
 
   const getUserDisplayName = () => {
@@ -369,6 +390,14 @@ const ResultPage = () => {
                   </h2>
                 </div>
 
+
+                {/* In progress*/}
+                {/* Present Status Title */}
+                <div className="text-center mb-10">
+                  <h2 className="italic text-xl md:text-2xl font-bold text-white bg-purple-700 inline-block px-6 py-2 rounded-full shadow-lg">
+                    MOCK EXAM IN PROGRESS
+                  </h2>
+                </div>
                 {/* Level Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
                   {[
@@ -382,14 +411,14 @@ const ResultPage = () => {
                       ? getMockExamDisplay(item.status)
                       : getLevelStatus(item.status);
 
+                    const cardClasses = item.level === 2
+                      ? "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/60"
+                      : `${statusInfo.color} ${statusInfo.glow}`;
+
                     return (
                       <div
                         key={idx}
-                        className={`group relative text-white text-center py-12 px-6 md:px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-700 hover:shadow-3xl hover:-translate-y-8 hover:scale-105 cursor-pointer ${
-                          item.level === 2
-                            ? "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/60"
-                            : statusInfo.color + " " + statusInfo.glow
-                        }`}
+                        className={`group relative text-white text-center py-12 px-6 md:px-8 rounded-3xl shadow-2xl backdrop-blur-xl border border-white/30 overflow-hidden transition-all duration-700 hover:shadow-3xl hover:-translate-y-8 hover:scale-105 cursor-pointer ${cardClasses}`}
                       >
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
                         <div className="absolute top-4 right-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700"></div>
