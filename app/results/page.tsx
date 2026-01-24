@@ -15,15 +15,14 @@ import {
 import Image from "next/image";
 import logo from "../../assets/ICTPL_image.png";
 import { supabase } from "@/lib/Supabase";
-// Import both JSON files statically
-import memberMapData from "@/public/member.json"; // membershipId → email
-import namesMapData from "@/public/names.json"; // email → name
+import memberMapData from "@/public/member.json";     // membershipId → email
+import namesMapData from "@/public/names.json";       // email → name
 
 interface MemberMap {
-  [membershipId: string]: string; // membershipId → email
+  [membershipId: string]: string;
 }
 interface NamesMap {
-  [email: string]: string; // email → full name
+  [email: string]: string;
 }
 interface Candidate {
   membership_id: number;
@@ -33,7 +32,6 @@ interface Candidate {
   self_test_practice?: string;
   mock_exam?: string;
   final_ctpr_exam?: string;
-  // Certificate fields are kept in type but not used in UI for now
   mepsc_certificate_url?: string;
   self_test_certificate_url?: string;
   mock_certificate_url?: string;
@@ -41,6 +39,7 @@ interface Candidate {
 }
 
 const MOCK_EXAM_LINK = "https://test.tallyeducation.com/links/a4ffec55-f3a8-11f0-8447-0ac472d4f9eb/";
+const FINAL_CTPR_LINK = "https://test.tallyeducation.com/links/96dcca2f-f68e-11f0-bcaf-06ac946976b1/"; // ← CHANGE THIS if different!
 
 const ResultPage = () => {
   const auth = useAuth();
@@ -51,14 +50,12 @@ const ResultPage = () => {
   const [memberMap] = useState<MemberMap>(memberMapData);
   const [namesMap] = useState<NamesMap>(namesMapData);
 
-  // Redirect if not authenticated
   useEffect(() => {
     if (auth && !auth.loading && !auth.user) {
       router.push("/");
     }
   }, [auth, router]);
 
-  // Fetch candidate data
   useEffect(() => {
     if (!auth?.user?.email || Object.keys(memberMap).length === 0) return;
 
@@ -67,7 +64,6 @@ const ResultPage = () => {
       setError(null);
       const userEmail = auth.user?.email?.toLowerCase().trim();
 
-      // Find membership ID by email (case-insensitive & trimmed)
       const membershipIdStr = Object.keys(memberMap).find(
         (id) => memberMap[id].toLowerCase().trim() === userEmail
       );
@@ -130,95 +126,40 @@ const ResultPage = () => {
 
   const getLevelStatus = (field?: string) => {
     const value = field?.trim().toUpperCase();
-    if (value === "COMPLETED") {
-      return {
-        text: "COMPLETED ✅",
-        color: "bg-gradient-to-br from-emerald-500 to-teal-600",
-        glow: "shadow-emerald-500/60",
-      };
-    }
-    if (value === "SCHEDULED") {
-      return {
-        text: "SCHEDULED ⏰",
-        color: "bg-gradient-to-br from-amber-500 to-orange-500",
-        glow: "shadow-amber-500/60",
-      };
-    }
-    if (value === "PENDING") {
-      return {
-        text: "PENDING ⚠️",
-        color: "bg-gradient-to-br from-orange-500 to-red-500",
-        glow: "shadow-orange-500/60",
-      };
-    }
-    if (value === "FAILED") {
-      return {
-        text: "FAILED ⚠️",
-        color: "bg-gradient-to-br from-red-500 to-red-900",
-        glow: "shadow-red-500/60",
-      };
-    }
-    return {
-      text: "COMMENCING SOON 📚",
-      color: "bg-gradient-to-br from-purple-600 to-indigo-600",
-      glow: "shadow-purple-500/50",
-    };
+    if (value === "COMPLETED") return { text: "COMPLETED ✅", color: "bg-gradient-to-br from-emerald-500 to-teal-600", glow: "shadow-emerald-500/60" };
+    if (value === "SCHEDULED")  return { text: "SCHEDULED ⏰",  color: "bg-gradient-to-br from-amber-500 to-orange-500",  glow: "shadow-amber-500/60" };
+    if (value === "PENDING")    return { text: "PENDING ⚠️",   color: "bg-gradient-to-br from-orange-500 to-red-500",   glow: "shadow-orange-500/60" };
+    if (value === "FAILED")     return { text: "FAILED ⚠️",    color: "bg-gradient-to-br from-red-500 to-red-900",     glow: "shadow-red-500/60" };
+    return { text: "COMMENCING SOON 📚", color: "bg-gradient-to-br from-purple-600 to-indigo-600", glow: "shadow-purple-500/50" };
   };
 
   const getMockExamDisplay = (status?: string) => {
-    // Not started / empty
     if (!status || status.trim() === "") {
-      return {
-        text: "COMMENCING SOON 📚",
-        color: "bg-gradient-to-br from-purple-600 to-indigo-600",
-        glow: "shadow-purple-500/50",
-      };
+      return { text: "COMMENCING SOON 📚", color: "bg-gradient-to-br from-purple-600 to-indigo-600", glow: "shadow-purple-500/50" };
     }
-
     const value = status.trim().toUpperCase();
-
-    // Completed
-    if (value === "COMPLETED") {
-      return {
-        text: "COMPLETED ✅",
-        color: "bg-gradient-to-br from-emerald-500 to-teal-600",
-        glow: "shadow-emerald-500/60",
-      };
-    }
-
-    // Failed (if your backend writes this)
-    if (value === "FAILED") {
-      return {
-        text: "FAILED ⚠️",
-        color: "bg-gradient-to-br from-red-500 to-red-900",
-        glow: "shadow-red-500/60",
-      };
-    }
-
-    // Any other non-empty value → in progress
-    return {
-      text: "MOCK EXAM IN PROGRESS ⏳",
-      color: "bg-gradient-to-br from-blue-500 to-cyan-600",
-      glow: "shadow-blue-500/60",
-    };
+    if (value === "COMPLETED") return { text: "COMPLETED ✅", color: "bg-gradient-to-br from-emerald-500 to-teal-600", glow: "shadow-emerald-500/60" };
+    if (value === "FAILED")    return { text: "FAILED ⚠️",    color: "bg-gradient-to-br from-red-500 to-red-900",     glow: "shadow-red-500/60" };
+    return { text: "MOCK EXAM IN PROGRESS ⏳", color: "bg-gradient-to-br from-blue-500 to-cyan-600", glow: "shadow-blue-500/60" };
   };
+
+  const shouldShowAttendLink = (status?: string) =>
+    !status || status.trim().toUpperCase() !== "COMPLETED";
 
   const getUserDisplayName = () => {
     const userEmail = auth?.user?.email?.toLowerCase().trim();
-    if (userEmail && namesMap[userEmail]) {
-      return namesMap[userEmail];
-    }
-    return auth?.user?.email?.split("@")[0] || "User";
+    return userEmail && namesMap[userEmail]
+      ? namesMap[userEmail]
+      : auth?.user?.email?.split("@")[0] || "User";
   };
 
-  // Calculate progress
   const completedLevels = candidate
     ? [
         candidate.mepsc_assesment,
         candidate.self_test_practice,
         candidate.mock_exam,
         candidate.final_ctpr_exam,
-      ].filter((status) => status?.trim().toUpperCase() === "COMPLETED").length
+      ].filter((s) => s?.trim().toUpperCase() === "COMPLETED").length
     : 0;
 
   const totalLevels = 4;
@@ -318,7 +259,6 @@ const ResultPage = () => {
               RESULTS
             </h1>
 
-            {/* Error Message */}
             {error && (
               <div className="bg-red-50 border border-red-200 p-8 rounded-xl text-red-700 text-center mb-12">
                 <p className="text-2xl font-bold">Error</p>
@@ -326,10 +266,8 @@ const ResultPage = () => {
               </div>
             )}
 
-            {/* Results Display */}
             {candidate && (
               <>
-                {/* Candidate Info */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                   <div className="bg-blue-600 text-white text-center py-4 rounded-lg shadow">
                     <p className="text-sm font-semibold">NAME</p>
@@ -347,13 +285,10 @@ const ResultPage = () => {
                   </div>
                 </div>
 
-                {/* Progress & Qualification Status */}
                 <div className="mb-12 bg-white rounded-xl shadow-lg p-6 md:p-8">
                   <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">
                     Qualification Progress
                   </h3>
-
-                  {/* Progress Bar */}
                   <div className="relative pt-1">
                     <div className="overflow-hidden h-8 mb-4 text-xs flex rounded-full bg-gray-200 shadow-inner">
                       <div
@@ -368,8 +303,6 @@ const ResultPage = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* Qualification Status */}
                   <div className="text-center">
                     {isFullyQualified ? (
                       <div className="inline-block px-10 py-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-bold text-xl rounded-full shadow-xl">
@@ -383,37 +316,41 @@ const ResultPage = () => {
                   </div>
                 </div>
 
-                {/* Present Status Title */}
                 <div className="text-center mb-10">
                   <h2 className="text-3xl md:text-4xl font-bold text-white bg-blue-600 inline-block px-12 py-4 rounded-full shadow-lg">
                     PRESENT STATUS
                   </h2>
                 </div>
 
-
-                {/* In progress*/}
-                {/* Present Status Title */}
+                {/* Optional – keep or remove this banner */}
                 <div className="text-center mb-10">
                   <h2 className="italic text-xl md:text-2xl font-bold text-white bg-purple-700 inline-block px-6 py-2 rounded-full shadow-lg">
                     MOCK EXAM IN PROGRESS
                   </h2>
                 </div>
-                {/* Level Cards */}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
                   {[
-                    { level: 1, name: "MEPSC ASSESSMENT", status: candidate.mepsc_assesment },
-                    { level: 2, name: "SELF TEST PRACTICE", status: candidate.self_test_practice },
-                    { level: 3, name: "MOCK EXAM", status: candidate.mock_exam },
-                    { level: 4, name: "FINAL CTPR EXAM", status: candidate.final_ctpr_exam },
+                    { level: 1, name: "MEPSC ASSESSMENT",     status: candidate.mepsc_assesment,     link: null },
+                    { level: 2, name: "SELF TEST PRACTICE",   status: candidate.self_test_practice, link: "/tests" as const },
+                    { level: 3, name: "MOCK EXAM",            status: candidate.mock_exam,           link: MOCK_EXAM_LINK },
+                    { level: 4, name: "FINAL CTPR EXAM",      status: candidate.final_ctpr_exam,     link: FINAL_CTPR_LINK },
                   ].map((item, idx) => {
                     const isMock = item.level === 3;
+                    const isPractice = item.level === 2;
                     const statusInfo = isMock
                       ? getMockExamDisplay(item.status)
                       : getLevelStatus(item.status);
 
-                    const cardClasses = item.level === 2
-                      ? "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/60"
-                      : `${statusInfo.color} ${statusInfo.glow}`;
+                    const showAttendLink =
+                      item.link &&
+                      typeof item.link === "string" &&
+                      shouldShowAttendLink(item.status);
+
+                    const cardClasses =
+                      item.level === 2
+                        ? "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/60"
+                        : `${statusInfo.color} ${statusInfo.glow}`;
 
                     return (
                       <div
@@ -426,16 +363,16 @@ const ResultPage = () => {
                         <div className="relative z-10">
                           <p className="text-lg font-semibold mb-6 tracking-wide">{item.name}</p>
 
-                          {item.level === 2 ? (
+                          {isPractice ? (
                             <Link
                               href="/tests"
                               className="block mt-4 px-6 py-3 bg-white text-indigo-700 font-bold rounded-full shadow-lg hover:bg-gray-100 transition transform hover:scale-105 text-base"
                             >
                               Go to Practice Tests
                             </Link>
-                          ) : isMock && statusInfo.text !== "COMPLETED ✅" ? (
+                          ) : showAttendLink ? (
                             <a
-                              href={MOCK_EXAM_LINK}
+                              href={item.link}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="block mt-2 px-3 py-3 bg-white text-red-700 font-bold rounded-full shadow-lg hover:bg-gray-100 transition transform hover:scale-105 text-base"
@@ -459,7 +396,6 @@ const ResultPage = () => {
               </>
             )}
 
-            {/* No Data */}
             {!candidate && !error && !loading && (
               <div className="text-center py-20">
                 <p className="text-2xl text-gray-600">No results available yet.</p>
