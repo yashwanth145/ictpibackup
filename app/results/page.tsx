@@ -293,7 +293,7 @@ const ResultPage = () => {
                     <div className="overflow-hidden h-8 mb-4 text-xs flex rounded-full bg-gray-200 shadow-inner">
                       <div
                         style={{ width: `${progressPercentage}%` }}
-                        className={`shadow-none flex flex-col text-center whitespace-nowrap text-green-700 justify-center transition-all duration-1000 font-medium ${
+                        className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center transition-all duration-1000 font-medium ${
                           isFullyQualified
                             ? "bg-gradient-to-r from-green-500 via-emerald-500 to-teal-600"
                             : "bg-gradient-to-r from-blue-500 to-indigo-600"
@@ -309,7 +309,7 @@ const ResultPage = () => {
                         🎉 FULLY QUALIFIED – All Levels Completed!
                       </div>
                     ) : (
-                      <p className="text-xl font-semibold text-gray-700">
+                      <p className="text-xl font-semibold text-black bold">
                         Current Status: {completedLevels} of {totalLevels} levels passed
                       </p>
                     )}

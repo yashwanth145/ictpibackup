@@ -10,7 +10,6 @@ import {
   LogOut,
   Radio,
   Circle,
-  Clock,
   History,
   GraduationCap,
   ClipboardPenLine,
@@ -65,8 +64,7 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [liveNow, setLiveNow] = useState(false);
-  const [nearestFutureSession, setNearestFutureSession] =
-    useState<Session | null>(null);
+  const [nearestFutureSession, setNearestFutureSession] = useState<Session | null>(null);
 
   const isSessionLiveNow = (s: Session): boolean => {
     const now = toZonedTime(new Date(), "Asia/Kolkata");
@@ -110,7 +108,7 @@ export default function Dashboard() {
 
     if (auth?.user) {
       fetchSessions();
-      const id = setInterval(fetchSessions, 30_000);
+      const id = setInterval(fetchSessions, 30000);
       return () => clearInterval(id);
     }
   }, [auth?.user]);
@@ -160,7 +158,12 @@ export default function Dashboard() {
     return auth.user?.email?.split("@")[0] || "User";
   };
 
+  const getUserEmail = () => {
+    return auth.user?.email?.toLowerCase() || "No email";
+  };
+
   const fullName = getUserDisplayName().trim();
+  const email = getUserEmail();
   const hasSpace = fullName.includes(" ");
   const nameParts = fullName.split(" ");
   const firstName = nameParts[0];
@@ -180,7 +183,7 @@ export default function Dashboard() {
 
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-100">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:sticky md:top-0 md:flex md:flex-col md:w-60 md:h-screen md:bg-[#0062cc] md:text-white md:overflow-y-auto">
+        <aside className="hidden md:sticky md:top-0 md:flex md:flex-col md:w-60 md:h-screen md:bg-[#0062cc] md:text-white md:overflow-y-auto scrollbar-hide">
           <nav className="flex-1 mt-4 space-y-3">
             <Link href="/dashboard" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <LayoutDashboard className="w-5 h-5 mr-3" /> Dashboard
@@ -211,143 +214,185 @@ export default function Dashboard() {
 
         {/* Mobile Bottom Nav */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0062cc]/95 backdrop-blur-sm text-white flex justify-around items-center py-2 shadow-lg z-50">
-          <Link href="/dashboard" className="flex flex-col items-center text-xs"><LayoutDashboard className="w-5 h-5 mb-1" /> Dashboard</Link>
-          <Link href="/results" className="flex flex-col items-center text-xs"><ClipboardList className="w-5 h-5 mb-1" /> Results</Link>
-          <Link href="/sessions" className="flex flex-col items-center text-xs"><ClipboardList className="w-5 h-5 mb-1" /> Sessions</Link>
-          <Link href="/previous" className="flex flex-col items-center text-xs"><History className="w-5 h-5 mb-1" /> Previous</Link>
-          <Link href="/vlogs" className="flex flex-col items-center text-xs"><ClipboardList className="w-5 h-5 mb-1" /> B/Vlogs</Link>
-          <Link href="/schedule" className="flex flex-col items-center text-xs"><GraduationCap className="w-5 h-5 mb-1" /> Exam information</Link>
-          <Link href="/modelpaper" className="flex flex-col items-center text-xs"><ClipboardPenLine className="w-5 h-5 mb-1" /> Papers</Link>
-          <Link href="/tests" className="flex flex-col items-center text-xs"><ClipboardPenLine className="w-5 h-5 mb-1" /> Practice tests</Link>
-          <button onClick={handleSignOut} className="flex flex-col items-center text-xs"><LogOut className="w-5 h-5 mb-1" /> Logout</button>
+          <Link href="/dashboard" className="flex flex-col items-center text-xs">
+            <LayoutDashboard className="w-5 h-5 mb-1" /> Dashboard
+          </Link>
+          <Link href="/results" className="flex flex-col items-center text-xs">
+            <ClipboardList className="w-5 h-5 mb-1" /> Results
+          </Link>
+          <Link href="/sessions" className="flex flex-col items-center text-xs">
+            <ClipboardList className="w-5 h-5 mb-1" /> Sessions
+          </Link>
+          <Link href="/previous" className="flex flex-col items-center text-xs">
+            <History className="w-5 h-5 mb-1" /> Previous
+          </Link>
+          <Link href="/vlogs" className="flex flex-col items-center text-xs">
+            <ClipboardList className="w-5 h-5 mb-1" /> B/Vlogs
+          </Link>
+          <Link href="/schedule" className="flex flex-col items-center text-xs">
+            <GraduationCap className="w-5 h-5 mb-1" /> Exam
+          </Link>
+          <Link href="/modelpaper" className="flex flex-col items-center text-xs">
+            <ClipboardPenLine className="w-5 h-5 mb-1" /> Papers
+          </Link>
+          <Link href="/tests" className="flex flex-col items-center text-xs">
+            <ClipboardPenLine className="w-5 h-5 mb-1" /> Tests
+          </Link>
+          <button onClick={handleSignOut} className="flex flex-col items-center text-xs">
+            <LogOut className="w-5 h-5 mb-1" /> Logout
+          </button>
         </nav>
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white shadow px-4 md:px-6 py-4 sticky top-0 z-40 gap-4">
-            {/* Left: Logo + Announcements */}
-            <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-              <Image src={logo} alt="Logo" className="h-[60px] w-[60px] md:h-[100px] md:w-[100px]" />
-
-              <div className="flex flex-col sm:flex-row gap-3 text-sm w-full">
-                {/* MEPSC ASSESSMENT */}
-                
-
-                
-              </div>
+            {/* Left: Logo */}
+            <div className="flex items-center gap-4">
+              <Image src={logo} alt="Logo" className="h-16 w-16 md:h-24 md:w-24" />
             </div>
 
-            {/* Right Side: Badge + Name + Sign Out */}
-            <div className="flex flex-col items-end gap-2 w-full md:w-auto">
-              {/* Live Badge */}
-              {badgeSession && (
-                <button
-                  onClick={() => openModal(badgeSession)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-medium transition whitespace-nowrap
-                    ${liveNow ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}
-                >
-                  {liveNow ? (
+            {/* Right: User info + Sign out */}
+            <div className="flex items-center gap-5 md:gap-8">
+              <button
+                onClick={() => router.push("/profile")}
+                className="flex items-center gap-3 hover:opacity-90 transition-all group"
+                title="View profile"
+              >
+                <div className="bg-blue-50 text-blue-700 rounded-full p-2.5 group-hover:bg-blue-100 transition-colors">
+                  <User2 className="w-6 h-6" />
+                </div>
+
+                <div className="text-left min-w-0">
+                  {hasSpace ? (
                     <>
-                      <Radio className="w-4 h-4" />
-                      <span className="hidden sm:inline">LIVE NOW</span>
+                      <div className="text-base font-semibold text-gray-800 leading-tight">
+                        {firstName}
+                      </div>
+                      {lastName && (
+                        <div className="text-sm text-gray-600">{lastName}</div>
+                      )}
                     </>
                   ) : (
-                    <>
-                      <Circle className="w-4 h-4 fill-current" />
-                      <span className="hidden sm:inline">UPCOMING</span>
-                    </>
+                    <div
+                      className="text-base font-semibold text-gray-800 truncate max-w-[180px]"
+                      title={fullName}
+                    >
+                      {fullName}
+                    </div>
                   )}
-                </button>
-              )}
 
-              <div className="flex items-center gap-4 md:gap-6">
-  {/* Profile Button – clickable area */}
-  <button
-    onClick={() => router.push("/profile")}
-    className="flex items-center gap-2.5 hover:opacity-85 transition-all duration-200 group"
-    title="View your profile"
-  >
-    <div className="bg-blue-50 text-blue-700 rounded-full p-2 group-hover:bg-blue-100 transition-colors">
-      <User2 className="w-5 h-5" />
-    </div>
+                  {/* Email on the next line */}
+                  <div
+                    className="text-xs text-gray-500 mt-0.5 truncate max-w-[220px]"
+                    title={email}
+                  >
+                    {email}
+                  </div>
+                </div>
+              </button>
 
-    <div className="text-left">
-      {hasSpace ? (
-        <>
-          <div className="text-sm font-semibold text-gray-800 leading-tight">{firstName}</div>
-          {lastName && (
-            <div className="text-xs text-gray-600 opacity-90">{lastName}</div>
-          )}
-        </>
-      ) : (
-        <div className="text-sm font-semibold text-gray-800 truncate max-w-[160px]" title={fullName}>
-          {fullName}
-        </div>
-      )}
-    </div>
-  </button>
-
-  {/* Sign Out Button */}
-  <button
-    onClick={handleSignOut}
-    className="hidden sm:flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition text-sm font-medium shadow-sm"
-  >
-    <LogOut className="w-4 h-4" /> Sign Out
-  </button>
-</div>
-
-             
-              
+              {/* Sign Out Button */}
+              <button
+                onClick={handleSignOut}
+                className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition text-sm font-medium shadow-sm"
+              >
+                <LogOut className="w-4 h-4" /> Sign Out
+              </button>
             </div>
           </header>
 
+          {/* Live / Upcoming Badge */}
+          {badgeSession && (
+            <div className="px-4 md:px-8 pt-4">
+              <button
+                onClick={() => openModal(badgeSession)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-white text-sm font-medium transition
+                  ${liveNow ? "bg-green-600 hover:bg-green-700" : "bg-orange-600 hover:bg-orange-700"}`}
+              >
+                {liveNow ? (
+                  <>
+                    <Radio className="w-5 h-5" />
+                    LIVE NOW – {badgeSession.sessiontitle}
+                  </>
+                ) : (
+                  <>
+                    <Circle className="w-4 h-4 fill-current" />
+                    Upcoming: {badgeSession.sessiontitle}
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
           {/* Course Cards */}
-          <main className="flex-1 p-4 sm:p-6 md:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto mb-[80px] md:mb-0 bg-gray-100">
+          <main className="flex-1 p-4 sm:p-6 md:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto pb-24 md:pb-8 bg-gray-100">
             {courses.map((c, i) => (
               <div
                 key={i}
                 onClick={() => router.push(`/courses/${c.route}`)}
-                className="bg-white shadow-md rounded-xl p-4 hover:shadow-xl transition cursor-pointer transform hover:-translate-y-1"
+                className="bg-white shadow-md rounded-xl p-5 hover:shadow-xl transition cursor-pointer transform hover:-translate-y-1 active:scale-98"
               >
-                <Image src={c.image} alt={c.title} className="w-full h-40 object-cover rounded-md mb-3" />
-                <h3 className="text-lg font-semibold text-gray-800 text-center">{c.title}</h3>
+                <Image
+                  src={c.image}
+                  alt={c.title}
+                  className="w-full h-44 object-cover rounded-lg mb-4"
+                  priority={i < 2}
+                />
+                <h3 className="text-lg font-semibold text-gray-800 text-center">
+                  {c.title}
+                </h3>
               </div>
             ))}
           </main>
         </div>
 
-        {/* Session Modal */}
+        {/* Session Join Modal */}
         {showModal && selectedSession && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative">
-              <button onClick={closeModal} className="absolute top-3 right-3 text-gray-500 hover:text-gray-700">
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 relative">
+              <button
+                onClick={closeModal}
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
+              >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
-              <div className="flex items-center gap-2 mb-3">
+
+              <div className="flex items-center gap-3 mb-4">
                 {liveNow ? (
                   <div className="flex items-center gap-2 text-green-600">
-                    <Radio className="w-5 h-5" />
-                    <span className="font-bold text-lg">LIVE NOW</span>
+                    <Radio className="w-6 h-6" />
+                    <span className="font-bold text-xl">LIVE NOW</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 text-red-600">
-                    <Circle className="w-5 h-5 fill-current" />
-                    <span className="font-bold text-lg">Upcoming Session</span>
+                  <div className="flex items-center gap-2 text-orange-600">
+                    <Circle className="w-6 h-6 fill-current" />
+                    <span className="font-bold text-xl">Upcoming Session</span>
                   </div>
                 )}
               </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-3">{selectedSession.sessiontitle}</h3>
-              <div className="space-y-2 text-sm text-gray-600 mb-5">
-                <p><strong>Date:</strong> {format(new Date(selectedSession.sessiondate), "dd MMM yyyy")}</p>
-                <p><strong>Time:</strong> {format(new Date(`1970-01-01T${selectedSession.sessiontime}`), "hh:mm a")}</p>
+
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                {selectedSession.sessiontitle}
+              </h3>
+
+              <div className="space-y-3 text-gray-700 mb-6">
+                <p>
+                  <strong>Date:</strong>{" "}
+                  {format(new Date(selectedSession.sessiondate), "dd MMM yyyy")}
+                </p>
+                <p>
+                  <strong>Time:</strong>{" "}
+                  {format(new Date(`1970-01-01T${selectedSession.sessiontime}`), "hh:mm a")} IST
+                </p>
               </div>
+
               <a
                 href={selectedSession.sessionlink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full bg-[#0062cc] text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition text-center block"
+                className="w-full bg-[#0062cc] text-white font-medium py-3.5 rounded-xl hover:bg-blue-700 transition text-center block text-lg shadow-md"
               >
                 Join Google Meet
               </a>
