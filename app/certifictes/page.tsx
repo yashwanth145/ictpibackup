@@ -65,10 +65,10 @@ export default function Dashboard() {
   const [liveNow, setLiveNow] = useState(false);
   const [nearestFutureSession, setNearestFutureSession] = useState<Session | null>(null);
 
-  // Certificate states
-  const [certificates, setCertificates] = useState<CertificateItem[]>([]);
-  const [loadingCerts, setLoadingCerts] = useState(true);
-  const [isQualified, setIsQualified] = useState(false);
+  // Certificate / Marksheet states
+  const [documents, setDocuments] = useState<CertificateItem[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(true);
+  const [isQualifiedForCTPR, setIsQualifiedForCTPR] = useState(false);
   const [membershipId, setMembershipId] = useState<number | null>(null);
 
   const emailToName = new Map<string, string>(
@@ -95,65 +95,76 @@ export default function Dashboard() {
 
     if (!entry) {
       console.warn(`No membership ID found for email: ${userEmail}`);
-      setLoadingCerts(false);
+      setLoadingDocs(false);
       return;
     }
 
     const mid = Number(entry[0]);
     setMembershipId(mid);
 
-    // Fetch qualification & generate Final CTPR certificate URL from storage
-    const fetchQualificationAndCerts = async () => {
-      setLoadingCerts(true);
+    // Fetch qualification & document URLs
+    const fetchQualificationAndDocuments = async () => {
+      setLoadingDocs(true);
 
-      const { data, error } = await supabase
+      // 1. Check CTPR qualification
+      const { data: candidateData, error: candError } = await supabase
         .from("candidate_exam_schedule")
-        .select(`
-          final_ctpr_exam
-        `)
+        .select("final_ctpr_exam")
         .eq("membership_id", mid)
         .maybeSingle();
 
-      if (error) {
-        console.error("Error fetching candidate data:", error);
-        setLoadingCerts(false);
-        return;
+      if (candError) {
+        console.error("Error fetching candidate data:", candError);
       }
 
-      if (!data) {
-        setLoadingCerts(false);
-        return;
-      }
+      const qualified = candidateData?.final_ctpr_exam?.toUpperCase() === "QUALIFIED";
+      setIsQualifiedForCTPR(qualified);
 
-      const qualified = (data.final_ctpr_exam || "").toUpperCase() === "QUALIFIED";
-      setIsQualified(qualified);
+      // 2. Collect documents
+      const docs: CertificateItem[] = [];
+      const membershipStr = mid.toString();
 
+      // ── Final CTPR Certificate ──
       if (qualified) {
-        const certs: CertificateItem[] = [];
-        const membershipStr = mid.toString();
-        const filePath = `${membershipStr}.pdf`;  // Matches your bucket: 100115.pdf, etc.
+        const ctprPath = `${membershipStr}.pdf`;
 
-        const { data: urlData } = supabase.storage
+        const { data: ctprUrlData } = supabase.storage
           .from("certificates")
-          .getPublicUrl(filePath);
+          .getPublicUrl(ctprPath);
 
-        if (urlData?.publicUrl) {
-          certs.push({
-            label: "Final CTPR Exam",
-            status: data.final_ctpr_exam,
-            url: urlData.publicUrl,
+        if (ctprUrlData?.publicUrl) {
+          docs.push({
+            label: "Final CTPR Certificate",
+            status: candidateData?.final_ctpr_exam || "Qualified",
+            url: ctprUrlData.publicUrl,
           });
         } else {
-          console.warn(`Final CTPR certificate not found at path: ${filePath}`);
+          console.warn(`CTPR certificate not found: ${ctprPath}`);
         }
-
-        setCertificates(certs);
       }
 
-      setLoadingCerts(false);
+      // ── MEPSC Marksheet 2025 ──
+      const marksheetPath = `Markscard2025/${membershipStr}.PDF`;
+
+      const { data: marksUrlData } = supabase.storage
+        .from("Marksheet")
+        .getPublicUrl(marksheetPath);
+
+      if (marksUrlData?.publicUrl) {
+        docs.push({
+          label: "MEPSC Marksheet 2025",
+          status: "Issued",
+          url: marksUrlData.publicUrl,
+        });
+      } else {
+        console.warn(`MEPSC marksheet not found: ${marksheetPath}`);
+      }
+
+      setDocuments(docs);
+      setLoadingDocs(false);
     };
 
-    fetchQualificationAndCerts();
+    fetchQualificationAndDocuments();
 
     // ── Sessions logic (unchanged) ──
     const fetchSessions = async () => {
@@ -396,58 +407,57 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Certificates Section – Now only Final CTPR */}
+          {/* Documents Section – CTPR Certificate + MEPSC Marksheet */}
           <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto pb-24 md:pb-8 bg-gray-100">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Certificates</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Certificates & Marksheets</h2>
 
-            {loadingCerts ? (
-              <p className="text-center text-gray-600 py-10">Loading your certificates...</p>
+            {loadingDocs ? (
+              <p className="text-center text-gray-600 py-10">Loading your documents...</p>
             ) : !membershipId ? (
               <div className="text-center text-gray-600 py-10">
                 Unable to identify your membership record.
               </div>
-            ) : !isQualified ? (
+            ) : documents.length === 0 ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center max-w-2xl mx-auto">
                 <p className="text-lg font-medium text-yellow-800">
-                  Final CTPR Exam not yet qualified
+                  No documents available yet
                 </p>
-                <p className="mt-2 text-gray-700">
-                  Your Final CTPR certificate will appear here once you qualify.
+                <p className="mt-3 text-gray-700">
+                  • Final CTPR Certificate will appear after you qualify.<br />
+                  • MEPSC Marksheet will appear once it is uploaded.
                 </p>
-              </div>
-            ) : certificates.length === 0 ? (
-              <div className="text-center text-gray-600 py-10">
-                Certificate file not found in storage for your membership ID.
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-                {certificates.map((cert, index) => (
+                {documents.map((doc, index) => (
                   <div
                     key={index}
-                    className="bg-white shadow-md rounded-xl p-6 hover:shadow-xl transition"
+                    className="bg-white shadow-md rounded-xl p-6 hover:shadow-xl transition-all duration-200"
                   >
-                    <div className="w-full h-48 bg-blue-50 rounded-lg mb-5 flex items-center justify-center">
+                    <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg mb-5 flex items-center justify-center">
                       <Award className="w-20 h-20 text-blue-600 opacity-80" />
                     </div>
                     <h3 className="text-xl font-semibold text-gray-800 text-center mb-4">
-                      {cert.label}
+                      {doc.label}
                     </h3>
 
-                    {cert.url ? (
+                    {doc.url ? (
                       <a
-                        href={cert.url}
+                        href={doc.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="w-full block bg-[#0062cc] hover:bg-blue-700 text-white font-medium py-3.5 rounded-lg text-center transition flex items-center justify-center gap-2 shadow-sm"
                       >
                         <FileText className="w-5 h-5" />
-                        View / Download Certificate
+                        View / Download
                       </a>
                     ) : (
-                      <p className="text-center text-red-600">
-                        Certificate file not available
+                      <p className="text-center text-red-600 font-medium">
+                        Document not available
                       </p>
                     )}
+
+                    
                   </div>
                 ))}
               </div>
