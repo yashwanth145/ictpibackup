@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronRight,
   BookOpen,
+  FileCheck
 } from "lucide-react";
 import logo from "../../assets/ICTPL_image.png";
 import emailNamePairs from "../../public/names.json";
@@ -125,6 +126,7 @@ export default function ModelPaperPage() {
             { href: "/schedule", icon: GraduationCap, label: "Schedule" },
             { href: "/modelpaper", icon: ClipboardPenLine, label: "Model Papers" },
             { href: "/tests", icon: ClipboardPenLine, label: "Practice Tests" },
+            { href: "/certificates", icon: FileCheck, label: "Certificates" },
           ].map((item) => (
             <Link
               key={item.href}

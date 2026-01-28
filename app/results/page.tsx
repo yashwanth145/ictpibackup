@@ -11,6 +11,7 @@ import {
   History,
   GraduationCap,
   ClipboardPenLine,
+  FileCheck,
 } from "lucide-react";
 import Image from "next/image";
 import logo from "../../assets/ICTPL_image.png";
@@ -205,6 +206,9 @@ const ResultPage = () => {
           <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
             <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
           </Link>
+          <Link href="/certifictes" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+             <FileCheck className="w-5 h-5 mr-3" /> Certificates
+          </Link>
         </nav>
       </aside>
 
@@ -228,6 +232,9 @@ const ResultPage = () => {
         <Link href="/tests" className="flex flex-col items-center py-1">
           <ClipboardPenLine className="w-5 h-5 mb-1" /> Tests
         </Link>
+        <Link href="/certificates" className="flex flex-col items-center text-xs">
+            <FileCheck className="w-5 h-5 mb-1" />Certificates
+          </Link>
         <button onClick={handleSignOut} className="flex flex-col items-center py-1">
           <LogOut className="w-5 h-5 mb-1" /> Logout
         </button>

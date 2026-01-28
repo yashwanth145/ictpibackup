@@ -1,4 +1,5 @@
 "use client";
+
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -13,23 +14,32 @@ import {
   History,
   GraduationCap,
   ClipboardPenLine,
-  FileCheck
+  FileCheck,
+  Award,
+  FileText,
 } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@supabase/supabase-js";
 
 // Assets
-import accountancy from "../../assets/Accountancy.webp";
-import complaince from "../../assets/complaiance.webp";
-import directax from "../../assets/directtax.webp";
-import appliedfinance from "../../assets/fourthimage.webp";
 import logo from "../../assets/ICTPL_image.png";
 
-// Date utilities
+// JSON files
+import namesData from "../../public/names.json";     // email → full name
+import memberData from "../../public/member.json";   // membershipId (string) → email
+
+// Date utilities for live sessions
 import { format, addMinutes, isWithinInterval } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 
-import emailNamePairs from "../../public/names.json";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("Missing Supabase environment variables");
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface Session {
   sessionid: number;
@@ -39,23 +49,11 @@ interface Session {
   sessionlink: string;
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    "Missing Supabase env vars! Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local"
-  );
+interface CertificateItem {
+  label: string;
+  status: string | null;
+  url: string | null;
 }
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-const emailToName = new Map<string, string>();
-Object.entries(emailNamePairs as Record<string, string>).forEach(
-  ([email, name]) => {
-    emailToName.set(email.toLowerCase(), name);
-  }
-);
 
 export default function Dashboard() {
   const auth = useAuth() as any;
@@ -67,108 +65,184 @@ export default function Dashboard() {
   const [liveNow, setLiveNow] = useState(false);
   const [nearestFutureSession, setNearestFutureSession] = useState<Session | null>(null);
 
-  const isSessionLiveNow = (s: Session): boolean => {
-    const now = toZonedTime(new Date(), "Asia/Kolkata");
-    const sessionDT = toZonedTime(
-      new Date(`${s.sessiondate}T${s.sessiontime}`),
-      "Asia/Kolkata"
-    );
-    const start = addMinutes(sessionDT, -5);
-    const end = addMinutes(sessionDT, 60);
-    return isWithinInterval(now, { start, end });
+  // Certificate states
+  const [certificates, setCertificates] = useState<CertificateItem[]>([]);
+  const [loadingCerts, setLoadingCerts] = useState(true);
+  const [isQualified, setIsQualified] = useState(false);
+  const [membershipId, setMembershipId] = useState<number | null>(null);
+
+  const emailToName = new Map<string, string>(
+    Object.entries(namesData as Record<string, string>)
+  );
+
+  const memberMap = memberData as Record<string, string>;
+
+  const getDisplayName = () => {
+    const email = auth.user?.email?.toLowerCase()?.trim() || "";
+    const name = emailToName.get(email) || email.split("@")[0] || "User";
+    return name.trim();
   };
 
   useEffect(() => {
-    const fetchSessions = async () => {
-      const { data, error } = await supabase.from("sessions").select("*");
+    if (!auth?.user) return;
+
+    const userEmail = auth.user.email.toLowerCase().trim();
+
+    // Find membership_id from member.json
+    const entry = Object.entries(memberMap).find(
+      ([, mappedEmail]) => mappedEmail.toLowerCase().trim() === userEmail
+    );
+
+    if (!entry) {
+      console.warn(`No membership ID found for email: ${userEmail}`);
+      setLoadingCerts(false);
+      return;
+    }
+
+    const mid = Number(entry[0]);
+    setMembershipId(mid);
+
+    // Fetch qualification & generate Final CTPR certificate URL from storage
+    const fetchQualificationAndCerts = async () => {
+      setLoadingCerts(true);
+
+      const { data, error } = await supabase
+        .from("candidate_exam_schedule")
+        .select(`
+          final_ctpr_exam
+        `)
+        .eq("membership_id", mid)
+        .maybeSingle();
+
       if (error) {
-        console.error("Supabase error:", error);
-        return;
-      }
-      if (!data || data.length === 0) {
-        setSessions([]);
+        console.error("Error fetching candidate data:", error);
+        setLoadingCerts(false);
         return;
       }
 
-      const sorted = (data as Session[]).sort((a, b) => {
+      if (!data) {
+        setLoadingCerts(false);
+        return;
+      }
+
+      const qualified = (data.final_ctpr_exam || "").toUpperCase() === "QUALIFIED";
+      setIsQualified(qualified);
+
+      if (qualified) {
+        const certs: CertificateItem[] = [];
+        const membershipStr = mid.toString();
+        const filePath = `${membershipStr}.pdf`;  // Matches your bucket: 100115.pdf, etc.
+
+        const { data: urlData } = supabase.storage
+          .from("certificates")
+          .getPublicUrl(filePath);
+
+        if (urlData?.publicUrl) {
+          certs.push({
+            label: "Final CTPR Exam",
+            status: data.final_ctpr_exam,
+            url: urlData.publicUrl,
+          });
+        } else {
+          console.warn(`Final CTPR certificate not found at path: ${filePath}`);
+        }
+
+        setCertificates(certs);
+      }
+
+      setLoadingCerts(false);
+    };
+
+    fetchQualificationAndCerts();
+
+    // ── Sessions logic (unchanged) ──
+    const fetchSessions = async () => {
+      const { data, error } = await supabase.from("sessions").select("*");
+      if (error || !data?.length) return;
+
+      const sorted = data.sort((a, b) => {
         const da = new Date(`${a.sessiondate}T${a.sessiontime}`).getTime();
         const db = new Date(`${b.sessiondate}T${b.sessiontime}`).getTime();
         return da - db;
       });
 
-      setSessions(sorted);
-      const anyLive = sorted.some(isSessionLiveNow);
+      setSessions(sorted as Session[]);
+
+      const now = toZonedTime(new Date(), "Asia/Kolkata");
+      const anyLive = sorted.some((s) => {
+        const sessionTime = toZonedTime(
+          new Date(`${s.sessiondate}T${s.sessiontime}`),
+          "Asia/Kolkata"
+        );
+        const start = addMinutes(sessionTime, -5);
+        const end = addMinutes(sessionTime, 60);
+        return isWithinInterval(now, { start, end });
+      });
       setLiveNow(anyLive);
 
-      const now = new Date();
       const future = sorted.find(
-        (s) => new Date(`${s.sessiondate}T${s.sessiontime}`) > now
+        (s) => new Date(`${s.sessiondate}T${s.sessiontime}`) > new Date()
       );
       setNearestFutureSession(future ?? null);
     };
 
-    if (auth?.user) {
-      fetchSessions();
-      const id = setInterval(fetchSessions, 30000);
-      return () => clearInterval(id);
-    }
+    fetchSessions();
+    const interval = setInterval(fetchSessions, 30000);
+
+    return () => clearInterval(interval);
   }, [auth?.user]);
 
   useEffect(() => {
-    if (!auth) return;
-    if (!auth.loading && !auth.user) router.push("/");
+    if (!auth?.loading && !auth?.user) {
+      router.push("/");
+    }
   }, [auth, router]);
 
-  if (!auth || auth.loading)
+  if (!auth || auth.loading) {
     return <p className="text-center mt-10 text-gray-600">Loading...</p>;
+  }
   if (!auth.user) return null;
 
   const handleSignOut = async () => {
     try {
       await auth.signOut?.();
+      await supabase.auth.signOut();
       router.push("/");
-    } catch (e) {
-      console.error("Sign out failed:", e);
+    } catch (err) {
+      console.error("Sign out failed:", err);
     }
   };
 
-  const openModal = (s: Session) => {
-    setSelectedSession(s);
+  const openModal = (session: Session) => {
+    setSelectedSession(session);
     setShowModal(true);
   };
+
   const closeModal = () => {
     setShowModal(false);
     setSelectedSession(null);
   };
 
-  const courses = [
-    { title: "Indirect Tax Laws Compliance (ITXL)", route: "indirecttax", image: accountancy },
-    { title: "Business Regulatory Laws Compliance(BRLC)", route: "business", image: complaince },
-    { title: "Direct Tax Laws Compliance (DTLC)", route: "directtax", image: directax },
-    { title: "Applied Financial Accounting & Ethics(AFAE)", route: "appliedfinance", image: appliedfinance },
-  ];
-
-  const liveSessions = sessions.filter(isSessionLiveNow);
-  const badgeSession = liveNow ? liveSessions[0] ?? null : nearestFutureSession;
-
-  const getUserDisplayName = () => {
-    const userEmail = auth.user?.email?.toLowerCase();
-    if (userEmail && emailToName.has(userEmail)) {
-      return emailToName.get(userEmail)!;
-    }
-    return auth.user?.email?.split("@")[0] || "User";
-  };
-
-  const getUserEmail = () => {
-    return auth.user?.email?.toLowerCase() || "No email";
-  };
-
-  const fullName = getUserDisplayName().trim();
-  const email = getUserEmail();
-  const hasSpace = fullName.includes(" ");
-  const nameParts = fullName.split(" ");
+  const fullName = getDisplayName();
+  const email = auth.user?.email?.toLowerCase() || "No email";
+  const nameParts = fullName.split(/\s+/);
   const firstName = nameParts[0];
   const lastName = nameParts.slice(1).join(" ");
+  const hasSpace = nameParts.length > 1;
+
+  const badgeSession = liveNow
+    ? sessions.find((s) => {
+        const now = toZonedTime(new Date(), "Asia/Kolkata");
+        const ses = toZonedTime(
+          new Date(`${s.sessiondate}T${s.sessiontime}`),
+          "Asia/Kolkata"
+        );
+        return isWithinInterval(now, {
+          start: addMinutes(ses, -5),
+          end: addMinutes(ses, 60),
+        });
+      }) ?? null
+    : nearestFutureSession;
 
   return (
     <>
@@ -210,7 +284,7 @@ export default function Dashboard() {
             <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
             </Link>
-            <Link href="/certifictes" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+            <Link href="/certificates" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <FileCheck className="w-5 h-5 mr-3" /> Certificates
             </Link>
           </nav>
@@ -243,7 +317,7 @@ export default function Dashboard() {
             <ClipboardPenLine className="w-5 h-5 mb-1" /> Tests
           </Link>
           <Link href="/certificates" className="flex flex-col items-center text-xs">
-            <FileCheck className="w-5 h-5 mb-1" />Certificates
+            <FileCheck className="w-5 h-5 mb-1" /> Certs
           </Link>
           <button onClick={handleSignOut} className="flex flex-col items-center text-xs">
             <LogOut className="w-5 h-5 mb-1" /> Logout
@@ -253,12 +327,10 @@ export default function Dashboard() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white shadow px-4 md:px-6 py-4 sticky top-0 z-40 gap-4">
-            {/* Left: Logo */}
             <div className="flex items-center gap-4">
               <Image src={logo} alt="Logo" className="h-16 w-16 md:h-24 md:w-24" />
             </div>
 
-            {/* Right: User info + Sign out */}
             <div className="flex items-center gap-5 md:gap-8">
               <button
                 onClick={() => router.push("/profile")}
@@ -275,9 +347,7 @@ export default function Dashboard() {
                       <div className="text-base font-semibold text-gray-800 leading-tight">
                         {firstName}
                       </div>
-                      {lastName && (
-                        <div className="text-sm text-gray-600">{lastName}</div>
-                      )}
+                      {lastName && <div className="text-sm text-gray-600">{lastName}</div>}
                     </>
                   ) : (
                     <div
@@ -287,18 +357,12 @@ export default function Dashboard() {
                       {fullName}
                     </div>
                   )}
-
-                  {/* Email on the next line */}
-                  <div
-                    className="text-xs text-gray-500 mt-0.5 truncate max-w-[220px]"
-                    title={email}
-                  >
+                  <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[220px]" title={email}>
                     {email}
                   </div>
                 </div>
               </button>
 
-              {/* Sign Out Button */}
               <button
                 onClick={handleSignOut}
                 className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition text-sm font-medium shadow-sm"
@@ -313,8 +377,9 @@ export default function Dashboard() {
             <div className="px-4 md:px-8 pt-4">
               <button
                 onClick={() => openModal(badgeSession)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-white text-sm font-medium transition
-                  ${liveNow ? "bg-green-600 hover:bg-green-700" : "bg-orange-600 hover:bg-orange-700"}`}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-white text-sm font-medium transition ${
+                  liveNow ? "bg-green-600 hover:bg-green-700" : "bg-orange-600 hover:bg-orange-700"
+                }`}
               >
                 {liveNow ? (
                   <>
@@ -331,25 +396,62 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Course Cards */}
-          <main className="flex-1 p-4 sm:p-6 md:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto pb-24 md:pb-8 bg-gray-100">
-            {courses.map((c, i) => (
-              <div
-                key={i}
-                onClick={() => router.push(`/courses/${c.route}`)}
-                className="bg-white shadow-md rounded-xl p-5 hover:shadow-xl transition cursor-pointer transform hover:-translate-y-1 active:scale-98"
-              >
-                <Image
-                  src={c.image}
-                  alt={c.title}
-                  className="w-full h-44 object-cover rounded-lg mb-4"
-                  priority={i < 2}
-                />
-                <h3 className="text-lg font-semibold text-gray-800 text-center">
-                  {c.title}
-                </h3>
+          {/* Certificates Section – Now only Final CTPR */}
+          <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto pb-24 md:pb-8 bg-gray-100">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Certificates</h2>
+
+            {loadingCerts ? (
+              <p className="text-center text-gray-600 py-10">Loading your certificates...</p>
+            ) : !membershipId ? (
+              <div className="text-center text-gray-600 py-10">
+                Unable to identify your membership record.
               </div>
-            ))}
+            ) : !isQualified ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center max-w-2xl mx-auto">
+                <p className="text-lg font-medium text-yellow-800">
+                  Final CTPR Exam not yet qualified
+                </p>
+                <p className="mt-2 text-gray-700">
+                  Your Final CTPR certificate will appear here once you qualify.
+                </p>
+              </div>
+            ) : certificates.length === 0 ? (
+              <div className="text-center text-gray-600 py-10">
+                Certificate file not found in storage for your membership ID.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                {certificates.map((cert, index) => (
+                  <div
+                    key={index}
+                    className="bg-white shadow-md rounded-xl p-6 hover:shadow-xl transition"
+                  >
+                    <div className="w-full h-48 bg-blue-50 rounded-lg mb-5 flex items-center justify-center">
+                      <Award className="w-20 h-20 text-blue-600 opacity-80" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-800 text-center mb-4">
+                      {cert.label}
+                    </h3>
+
+                    {cert.url ? (
+                      <a
+                        href={cert.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full block bg-[#0062cc] hover:bg-blue-700 text-white font-medium py-3.5 rounded-lg text-center transition flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <FileText className="w-5 h-5" />
+                        View / Download Certificate
+                      </a>
+                    ) : (
+                      <p className="text-center text-red-600">
+                        Certificate file not available
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </main>
         </div>
 
