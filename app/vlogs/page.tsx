@@ -19,7 +19,8 @@ import {
   ChevronDown,
   ChevronRight,
   BookOpen,
-  FileCheck
+  FileCheck,
+  Upload,
 } from "lucide-react";
 import logo from "../../assets/ICTPL_image.png";
 import emailNamePairs from "../../public/names.json";
@@ -27,8 +28,8 @@ import emailNamePairs from "../../public/names.json";
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface PdfItem {
   title: string;
-  src: string;
-  download: string;
+  src: string | null;        // null = not uploaded yet
+  download?: string;         // optional filename for download
 }
 
 interface AuthState {
@@ -43,11 +44,11 @@ Object.entries(emailNamePairs as Record<string, string>).forEach(([email, name])
   emailToName.set(email.toLowerCase(), name);
 });
 
-// ── Materials (only section shown) ───────────────────────────────────────────
+// ── Materials Data ────────────────────────────────────────────────────────────
 const ictpiMaterials: PdfItem[] = [
   {
     title: "Applied Financial Accounting and Ethics",
-    src: "/pdf/Indirect Tax Law Compliances.pdf",
+    src: "/pdf/Applied Financial Accounting and Ethics.pdf",
     download: "Applied Financial Accounting and Ethics.pdf",
   },
   {
@@ -67,6 +68,60 @@ const ictpiMaterials: PdfItem[] = [
   },
 ];
 
+const sreedharaMaterials: PdfItem[] = [
+  // {
+  //   title: "Advanced GST Litigation & Appeals",
+  //   src: "/pdf/Advanced_GST_Litigation_Sreedhara_Parthasarathy.pdf",
+  //   download: "Advanced GST Litigation & Appeals - CTPr Sreedhara Parthasarathy.pdf",
+  // },
+  // {
+  //   title: "Tax Planning for High Net Worth Individuals",
+  //   src: "/pdf/Tax_Planning_HNWI_Sreedhara.pdf",
+  //   download: "Tax Planning for HNIs - CTPr Sreedhara Parthasarathy.pdf",
+  // },
+  // {
+  //   title: "Ethics in Tax Practice (Upcoming)",
+  //   src: null,
+  // },
+  // {
+  //   title: "International Taxation Masterclass",
+  //   src: null,
+  // },
+];
+
+const subramanianMaterials: PdfItem[] = [
+  // {
+  //   title: "Companies Act Compliance Handbook",
+  //   src: "/pdf/Companies_Act_Compliance_Subramanian.pdf",
+  //   download: "Companies Act Compliance - BR.N. Subramanian.pdf",
+  // },
+  // {
+  //   title: "FEMA & RBI Compliance for Practitioners",
+  //   src: null,
+  // },
+  // {
+  //   title: "Corporate Restructuring & Tax Implications",
+  //   src: null,
+  // },
+];
+
+const baskaranMaterials: PdfItem[] = [
+  // {
+  //   title: "Income Tax Assessment & Scrutiny Mastery",
+  //   src: "/pdf/Income_Tax_Assessment_Baskaran.pdf",
+  //   download: "Income Tax Assessment Mastery - CTPr Kalyanasundaram Baskaran.pdf",
+  // },
+  // {
+  //   title: "TDS Compliance & Case Studies",
+  //   src: "/pdf/TDS_Compliance_Baskaran.pdf",
+  //   download: "TDS Compliance - CTPr Kalyanasundaram Baskaran.pdf",
+  // },
+  // {
+  //   title: "Black Money Act & Benami Transactions",
+  //   src: null,
+  // },
+];
+
 export default function ModelPaperPage() {
   const auth = useAuth() as AuthState;
   const router = useRouter();
@@ -75,7 +130,12 @@ export default function ModelPaperPage() {
   const { loading, user, signOut } = auth;
 
   const [selectedPdf, setSelectedPdf] = useState<string | null>(null);
-  const [expandedICTPI, setExpandedICTPI] = useState(false);
+
+  // Accordion states
+  const [expandedICTPI, setExpandedICTPI] = useState(true);
+  const [expandedSreedhara, setExpandedSreedhara] = useState(true);
+  const [expandedSubramanian, setExpandedSubramanian] = useState(false);
+  const [expandedBaskaran, setExpandedBaskaran] = useState(false);
 
   // ── Auth protection ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -83,12 +143,10 @@ export default function ModelPaperPage() {
     if (!user) {
       router.replace("/");
     }
-  }, [loading, user]); // ← stable dependencies → no warning
+  }, [loading, user, router]);
 
   const handleSignOut = async () => {
-    if (signOut) {
-      await signOut();
-    }
+    if (signOut) await signOut();
     router.replace("/");
   };
 
@@ -109,9 +167,89 @@ export default function ModelPaperPage() {
 
   if (!user) return null;
 
-  // Safe title lookup
   const selectedTitle =
-    ictpiMaterials.find((item) => item.src === selectedPdf)?.title ?? "Document";
+    [...ictpiMaterials, ...sreedharaMaterials, ...subramanianMaterials, ...baskaranMaterials]
+      .find((item) => item.src === selectedPdf)?.title ?? "Document";
+
+  // ── Reusable Material Card Component ───────────────────────────────────────
+  const MaterialCard = ({ item }: { item: PdfItem }) => {
+    const isAvailable = item.src !== null;
+
+    return (
+      <div
+        className={`bg-white rounded-lg shadow-sm p-6 transition-all border ${
+          isAvailable
+            ? "hover:shadow-md border-gray-200"
+            : "opacity-75 border-gray-300 bg-gray-50"
+        }`}
+      >
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 leading-tight pr-8">
+          {item.title}
+        </h3>
+
+        {isAvailable ? (
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={() => setSelectedPdf(item.src!)}
+              className="flex-1 flex items-center justify-center gap-2.5 py-3.5 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+            >
+              <Eye className="w-5 h-5" />
+              View
+            </button>
+            <a
+              href={item.src!}
+              download={item.download}
+              className="flex-1 flex items-center justify-center gap-2.5 py-3.5 px-5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition text-center"
+            >
+              <Download className="w-5 h-5" />
+              Download
+            </a>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center py-8 text-gray-500">
+            <Upload className="w-6 h-6 mr-2" />
+            <span className="font-medium">To be uploaded soon</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── Reusable Accordion Section ─────────────────────────────────────────────
+  const AccordionSection = ({
+    title,
+    materials,
+    expanded,
+    setExpanded,
+  }: {
+    title: string;
+    materials: PdfItem[];
+    expanded: boolean;
+    setExpanded: (v: boolean) => void;
+  }) => (
+    <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-800 text-white hover:brightness-105 transition"
+      >
+        <div className="flex items-center gap-3">
+          <BookOpen className="w-6 h-6" />
+          <h2 className="text-xl font-bold">{title}</h2>
+        </div>
+        {expanded ? <ChevronDown className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
+      </button>
+
+      {expanded && (
+        <div className="p-6 space-y-6 bg-gray-50">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            {materials.map((material, idx) => (
+              <MaterialCard key={idx} item={material} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
@@ -132,9 +270,7 @@ export default function ModelPaperPage() {
               key={item.href}
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-medium ${
-                pathname === item.href
-                  ? "bg-blue-800 shadow-md"
-                  : "hover:bg-blue-700/80"
+                pathname === item.href ? "bg-blue-800 shadow-md" : "hover:bg-blue-700/80"
               }`}
             >
               <item.icon className="w-5 h-5" />
@@ -144,16 +280,11 @@ export default function ModelPaperPage() {
         </nav>
       </aside>
 
-      {/* Main area */}
+      {/* Main Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <header className="bg-white shadow-sm sticky top-0 z-40 px-5 py-3 flex items-center justify-between">
-          <Image
-            src={logo}
-            alt="Company Logo"
-            className="h-14 w-14 md:h-16 md:w-16 object-contain"
-            priority
-          />
+          <Image src={logo} alt="Logo" className="h-14 w-14 md:h-16 md:w-16 object-contain" priority />
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="font-semibold text-gray-800">{getUserName()}</p>
@@ -172,61 +303,39 @@ export default function ModelPaperPage() {
         {/* Content */}
         <main className="flex-1 p-5 md:p-8 lg:p-10">
           <div className="max-w-5xl mx-auto space-y-8">
-            {/* ICTPI Materials Section */}
-            <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
-              <button
-                onClick={() => setExpandedICTPI(!expandedICTPI)}
-                className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-800 text-white hover:brightness-105 transition"
-              >
-                <div className="flex items-center gap-3">
-                  <BookOpen className="w-6 h-6" />
-                  <h2 className="text-xl font-bold">ICTPI Materials</h2>
-                </div>
-                {expandedICTPI ? (
-                  <ChevronDown className="w-6 h-6" />
-                ) : (
-                  <ChevronRight className="w-6 h-6" />
-                )}
-              </button>
+            <h1 className="text-3xl font-bold text-gray-800 mb-6">Faculty Study Materials</h1>
 
-              {expandedICTPI && (
-                <div className="p-6 space-y-6 bg-gray-50">
-                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                    {ictpiMaterials.map((material) => (
-                      <div
-                        key={material.src}
-                        className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border border-gray-200"
-                      >
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4 leading-tight">
-                          {material.title}
-                        </h3>
-                        <div className="flex flex-col sm:flex-row gap-4">
-                          <button
-                            onClick={() => setSelectedPdf(material.src)}
-                            className="flex-1 flex items-center justify-center gap-2.5 py-3.5 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
-                          >
-                            <Eye className="w-5 h-5" />
-                            View
-                          </button>
-                          <a
-                            href={material.src}
-                            download={material.download}
-                            className="flex-1 flex items-center justify-center gap-2.5 py-3.5 px-5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition text-center"
-                          >
-                            <Download className="w-5 h-5" />
-                            Download
-                          </a>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <AccordionSection
+              title="ICTPI Core Materials"
+              materials={ictpiMaterials}
+              expanded={expandedICTPI}
+              setExpanded={setExpandedICTPI}
+            />
+
+            <AccordionSection
+              title="CTPr Sreedhara Parthasarathy"
+              materials={sreedharaMaterials}
+              expanded={expandedSreedhara}
+              setExpanded={setExpandedSreedhara}
+            />
+
+            <AccordionSection
+              title="BR.N. Subramanian"
+              materials={subramanianMaterials}
+              expanded={expandedSubramanian}
+              setExpanded={setExpandedSubramanian}
+            />
+
+            <AccordionSection
+              title="CTPr Kalyanasundaram Baskaran"
+              materials={baskaranMaterials}
+              expanded={expandedBaskaran}
+              setExpanded={setExpandedBaskaran}
+            />
           </div>
         </main>
 
-        {/* Mobile bottom nav */}
+        {/* Mobile Bottom Nav */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0062cc] text-white z-50 shadow-2xl border-t border-blue-700">
           <div className="flex justify-around py-2 px-1 text-xs">
             {[
@@ -237,19 +346,12 @@ export default function ModelPaperPage() {
               { href: "/modelpaper", icon: ClipboardPenLine, label: "Papers" },
               { href: "/tests", icon: ClipboardPenLine, label: "Tests" },
             ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex flex-col items-center py-1 px-2 min-w-[60px]"
-              >
+              <Link key={item.href} href={item.href} className="flex flex-col items-center py-1 px-2 min-w-[60px]">
                 <item.icon className="w-6 h-6 mb-0.5" />
                 {item.label}
               </Link>
             ))}
-            <button
-              onClick={handleSignOut}
-              className="flex flex-col items-center py-1 px-2 min-w-[60px] text-red-200"
-            >
+            <button onClick={handleSignOut} className="flex flex-col items-center py-1 px-2 min-w-[60px] text-red-200">
               <LogOut className="w-6 h-6 mb-0.5" />
               Logout
             </button>
@@ -257,13 +359,11 @@ export default function ModelPaperPage() {
         </nav>
       </div>
 
-      {/* PDF Modal */}
+      {/* PDF Viewer Modal */}
       {selectedPdf && (
         <div className="fixed inset-0 bg-black/95 z-50 flex flex-col">
           <div className="bg-gray-900 text-white p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h3 className="text-lg font-semibold truncate flex-1">
-              {selectedTitle}
-            </h3>
+            <h3 className="text-lg font-semibold truncate flex-1">{selectedTitle}</h3>
             <div className="flex gap-3 w-full sm:w-auto">
               <a
                 href={selectedPdf}
@@ -282,12 +382,7 @@ export default function ModelPaperPage() {
               </button>
             </div>
           </div>
-          <iframe
-            src={selectedPdf}
-            className="flex-1 w-full bg-white"
-            title="PDF Viewer"
-            allowFullScreen
-          />
+          <iframe src={selectedPdf} className="flex-1 w-full bg-white" title="PDF Viewer" allowFullScreen />
         </div>
       )}
     </div>
