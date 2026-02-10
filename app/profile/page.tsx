@@ -627,8 +627,8 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-                These details can be filled <strong>only once</strong>.<br />
+              <p className="text-sm text-red-600 mb-6 leading-relaxed">
+                These details can be filled <strong><i>only once</i></strong>.<br />
                 Please enter the numbers carefully.
               </p>
 
