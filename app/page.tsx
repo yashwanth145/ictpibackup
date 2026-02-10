@@ -1,14 +1,17 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebaseConfig";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import logo from "../assets/ICTPL_image.png";
 import Image from "next/image";
+import logo from "../assets/ICTPL_image.png";
 import "../app/globals.css";
 
+import { supabase } from "@/lib/Supabase";
+
 interface MemberMap {
-  [userId: string]: string;
+  [userId: string]: string; // membership_id → email
 }
 
 export default function LoginPage() {
@@ -16,6 +19,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [memberMap, setMemberMap] = useState<MemberMap>({});
+  const [loading, setLoading] = useState<boolean>(true);
+
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
   const [resetMessage, setResetMessage] = useState<string>("");
   const [resetError, setResetError] = useState<string>("");
@@ -25,24 +30,50 @@ export default function LoginPage() {
   useEffect(() => {
     async function fetchMembers() {
       try {
-        const res = await fetch("/member.json");
-        const data = await res.json();
-        setMemberMap(data);
+        const { data, error } = await supabase
+          .from("memberinformation")
+          .select("membership_id, email");
+
+        if (error) throw error;
+
+        const map: MemberMap = {};
+        data?.forEach((row: any) => {
+          const mid = String(row.membership_id || "").trim().toUpperCase();
+          const email = String(row.email || "").trim();
+
+          if (mid && email) {
+            map[mid] = email;
+          }
+        });
+
+        setMemberMap(map);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching members:", err);
+      } finally {
+        setLoading(false);
       }
     }
+
     fetchMembers();
   }, []);
 
   async function handleLogin() {
     setError("");
+
+    if (loading) {
+      setError("Still loading member information...");
+      return;
+    }
+
+    const normalizedUserId = userId.trim().toUpperCase();
+    const email = memberMap[normalizedUserId];
+
+    if (!email) {
+      setError("Invalid User ID. Please use ICTPI provided credentials.");
+      return;
+    }
+
     try {
-      const email = memberMap[userId];
-      if (!email) {
-        setError("Invalid User ID. Please use ICTPI provided credentials.");
-        return;
-      }
       await signInWithEmailAndPassword(auth, email, password);
       setUserId("");
       setPassword("");
@@ -61,7 +92,9 @@ export default function LoginPage() {
       return;
     }
 
-    const email = memberMap[userId];
+    const normalizedUserId = userId.trim().toUpperCase();
+    const email = memberMap[normalizedUserId];
+
     if (!email) {
       setResetError("Invalid Member ID. No associated email found.");
       return;
@@ -69,7 +102,7 @@ export default function LoginPage() {
 
     try {
       await sendPasswordResetEmail(auth, email, {
-  url: "https://ictpiwebsite.vercel.app/reset-password",
+        url: "https://ictpiwebsite.vercel.app/reset-password",
         handleCodeInApp: true,
       });
 
@@ -96,6 +129,12 @@ export default function LoginPage() {
           </p>
         )}
 
+        {loading && (
+          <p className="text-blue-600 text-center text-sm mb-4">
+            Loading member data...
+          </p>
+        )}
+
         <div className="space-y-4">
           <input
             type="text"
@@ -103,6 +142,7 @@ export default function LoginPage() {
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
             className="w-full p-3 border border-blue-200 rounded-lg bg-blue-50 text-black"
+            disabled={loading}
           />
 
           <input
@@ -111,11 +151,13 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-3 border border-blue-200 rounded-lg bg-blue-50 text-black"
+            disabled={loading}
           />
 
           <button
             onClick={handleLogin}
-            className="w-full bg-blue-600 text-white p-3 rounded-lg"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white p-3 rounded-lg disabled:opacity-50"
           >
             Sign In
           </button>
@@ -124,6 +166,7 @@ export default function LoginPage() {
             <button
               onClick={() => setShowResetModal(true)}
               className="text-red-600 hover:underline text-sm"
+              disabled={loading}
             >
               Forgot Password?
             </button>

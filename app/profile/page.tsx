@@ -99,9 +99,15 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Certificate edit modal states
+  // Edit modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [certForm, setCertForm] = useState({
+  const [profileForm, setProfileForm] = useState({
+    date_of_birth: "",
+    father_name: "",
+    mother_name: "",
+    it_pan: "",
+    aadhar: "",
+    voter: "",
     ncvet: "",
     gstp: "",
     itp: "",
@@ -114,9 +120,15 @@ export default function ProfilePage() {
   const memberMap: MemberMap = memberMapData;
   const namesMap: NamesMap = namesMapData;
 
-  // Can only edit if ALL certificate fields are still empty
-  const canEditCertificates =
+  // Allow editing only if ALL editable fields are still empty
+  const canEditDetails =
     profile &&
+    !profile.date_of_birth &&
+    !profile.father_name &&
+    !profile.mother_name &&
+    !profile.it_pan &&
+    !profile.aadhar &&
+    !profile.voter &&
     !profile.ncvet &&
     !profile.gstp &&
     !profile.itp &&
@@ -341,11 +353,16 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto justify-end">
-            {/* Edit Certificates Button – shown only if allowed */}
-            {canEditCertificates && (
+            {canEditDetails && (
               <button
                 onClick={() => {
-                  setCertForm({
+                  setProfileForm({
+                    date_of_birth: profile?.date_of_birth || "",
+                    father_name: profile?.father_name || "",
+                    mother_name: profile?.mother_name || "",
+                    it_pan: profile?.it_pan || "",
+                    aadhar: profile?.aadhar || "",
+                    voter: profile?.voter || "",
                     ncvet: profile?.ncvet || "",
                     gstp: profile?.gstp || "",
                     itp: profile?.itp || "",
@@ -358,7 +375,7 @@ export default function ProfilePage() {
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium shadow-sm whitespace-nowrap"
               >
                 <ClipboardPenLine className="w-4 h-4" />
-                <span className="hidden sm:inline">Edit Profile information</span>
+                <span className="hidden sm:inline">Edit Profile Information</span>
               </button>
             )}
 
@@ -566,9 +583,9 @@ export default function ProfilePage() {
                     Additional Information & Links
                   </h2>
 
-                  {!canEditCertificates && (
+                  {!canEditDetails && (
                     <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-center text-green-800 text-sm">
-                      Certificate and license numbers have already been submitted and cannot be changed.
+                      Profile and certificate details have been submitted and cannot be changed.
                     </div>
                   )}
 
@@ -580,16 +597,6 @@ export default function ProfilePage() {
                         {profile.fellowship_link ? (
                           <a href={profile.fellowship_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                             View Fellowship
-                          </a>
-                        ) : "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-black">New Member Link</p>
-                      <p className="font-medium text-lg">
-                        {profile.new_member_link ? (
-                          <a href={profile.new_member_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                            View New Member Link
                           </a>
                         ) : "—"}
                       </p>
@@ -612,13 +619,13 @@ export default function ProfilePage() {
         </main>
 
         {/* ────────────────────────────────────────────────
-            CERTIFICATE EDIT MODAL (one-time use)
+            EDIT MODAL (one-time use for personal + certificate info)
         ──────────────────────────────────────────────── */}
         {isEditModalOpen && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-7 md:p-8 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">Update Certificate / License Numbers</h3>
+                <h3 className="text-2xl font-bold text-gray-900">Update Profile & Certificate Details</h3>
                 <button
                   onClick={() => setIsEditModalOpen(false)}
                   className="p-2 hover:bg-gray-100 rounded-full transition"
@@ -628,34 +635,131 @@ export default function ProfilePage() {
               </div>
 
               <p className="text-sm text-red-600 mb-6 leading-relaxed">
-                These details can be filled <strong><i>only once</i></strong>.<br />
-                Please enter the numbers carefully.
+                <strong>Important:</strong> These details can be filled <strong>only once</strong>.<br />
+                Please enter all information carefully — especially government IDs and certificate numbers.
               </p>
 
-              <div className="space-y-5 text-black">
-                {[
-                  { label: "NCVET Certificate No", key: "ncvet" },
-                  { label: "GSTP Certificate No", key: "gstp" },
-                  { label: "ITP Certificate No", key: "itp" },
-                  { label: "SIDH Certificate No", key: "sidh" },
-                  { label: "STP / VAT Certificate No", key: "stp" },
-                  { label: "CB Licence No", key: "cb" },
-                ].map(({ label, key }) => (
-                  <div key={key}>
-                    <label className="block text-sm font-medium text-gray-800 mb-1.5">
-                      {label}
-                    </label>
-                    <input
-                      type="text"
-                      value={certForm[key as keyof typeof certForm]}
-                      onChange={(e) =>
-                        setCertForm({ ...certForm, [key]: e.target.value.trim() })
-                      }
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-black"
-                      placeholder="Enter certificate / license number"
-                    />
+              <div className="space-y-6 text-black">
+                {/* Personal Identity */}
+                <div className="border-b pb-5">
+                  <h4 className="text-lg font-semibold mb-4 text-gray-800">Personal Identity</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                        Date of Birth <span className="text-red-600">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={profileForm.date_of_birth}
+                        onChange={(e) => setProfileForm({ ...profileForm, date_of_birth: e.target.value })}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                        Father's Name
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.father_name}
+                        onChange={(e) => setProfileForm({ ...profileForm, father_name: e.target.value.trim() })}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        placeholder="Full name"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                        Mother's Name
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.mother_name}
+                        onChange={(e) => setProfileForm({ ...profileForm, mother_name: e.target.value.trim() })}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        placeholder="Full name"
+                      />
+                    </div>
                   </div>
-                ))}
+                </div>
+
+                {/* Government IDs */}
+                <div className="border-b pb-5">
+                  <h4 className="text-lg font-semibold mb-4 text-gray-800">Government IDs</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                        IT PAN
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.it_pan}
+                        onChange={(e) => setProfileForm({ ...profileForm, it_pan: e.target.value.trim().toUpperCase() })}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition font-mono uppercase"
+                        placeholder="ABCDE1234F"
+                        maxLength={10}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                        Aadhaar Number
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.aadhar}
+                        onChange={(e) => setProfileForm({ ...profileForm, aadhar: e.target.value.trim() })}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition font-mono"
+                        placeholder="XXXX XXXX XXXX"
+                        maxLength={14}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                        Voter ID
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.voter}
+                        onChange={(e) => setProfileForm({ ...profileForm, voter: e.target.value.trim().toUpperCase() })}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition font-mono uppercase"
+                        placeholder="e.g. ABC1234567"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Certificates & Licenses */}
+                <div>
+                  <h4 className="text-lg font-semibold mb-4 text-gray-800">Certificates & Licenses</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {[
+                      { label: "NCVET", key: "ncvet" },
+                      { label: "GSTP Enrollment No.", key: "gstp" },
+                      { label: "ITP Enrollment No", key: "itp" },
+                      { label: "SIDH Certificate No", key: "sidh" },
+                      { label: "STP / VAT Enrollment No", key: "stp" },
+                      { label: "CB Licence No", key: "cb" },
+                    ].map(({ label, key }) => (
+                      <div key={key}>
+                        <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                          {label}
+                        </label>
+                        <input
+                          type="text"
+                          value={profileForm[key as keyof typeof profileForm] || ""}
+                          onChange={(e) =>
+                            setProfileForm({ ...profileForm, [key]: e.target.value.trim() })
+                          }
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                          placeholder="Enter number"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-4 mt-8">
@@ -673,18 +777,26 @@ export default function ProfilePage() {
 
                     try {
                       const membershipId = profile?.membership_id;
-                      if (!membershipId) throw new Error("No membership ID");
+                      if (!membershipId) throw new Error("No membership ID found");
+
+                      const updates = {
+                        date_of_birth: profileForm.date_of_birth || null,
+                        father_name: profileForm.father_name.trim() || null,
+                        mother_name: profileForm.mother_name.trim() || null,
+                        it_pan: profileForm.it_pan.trim().toUpperCase() || null,
+                        aadhar: profileForm.aadhar.trim() || null,
+                        voter: profileForm.voter.trim().toUpperCase() || null,
+                        ncvet: profileForm.ncvet.trim() || null,
+                        gstp: profileForm.gstp.trim() || null,
+                        itp: profileForm.itp.trim() || null,
+                        sidh: profileForm.sidh.trim() || null,
+                        stp: profileForm.stp.trim() || null,
+                        cb: profileForm.cb.trim() || null,
+                      };
 
                       const { error } = await supabase
                         .from("candidate_exam_schedule")
-                        .update({
-                          ncvet: certForm.ncvet.trim() || null,
-                          gstp: certForm.gstp.trim() || null,
-                          itp: certForm.itp.trim() || null,
-                          sidh: certForm.sidh.trim() || null,
-                          stp: certForm.stp.trim() || null,
-                          cb: certForm.cb.trim() || null,
-                        })
+                        .update(updates)
                         .eq("membership_id", membershipId);
 
                       if (error) throw error;
@@ -692,23 +804,15 @@ export default function ProfilePage() {
                       // Update local state
                       setProfile((prev) =>
                         prev
-                          ? {
-                              ...prev,
-                              ncvet: certForm.ncvet.trim() || null,
-                              gstp: certForm.gstp.trim() || null,
-                              itp: certForm.itp.trim() || null,
-                              sidh: certForm.sidh.trim() || null,
-                              stp: certForm.stp.trim() || null,
-                              cb: certForm.cb.trim() || null,
-                            }
+                          ? { ...prev, ...updates }
                           : null
                       );
 
-                      alert("Certificate details saved successfully!");
+                      alert("Profile and certificate details saved successfully!");
                       setIsEditModalOpen(false);
                     } catch (err: any) {
                       console.error("Save error:", err);
-                      alert("Failed to save: " + (err.message || "Unknown error"));
+                      alert("Failed to save details: " + (err.message || "Unknown error"));
                     } finally {
                       setSaving(false);
                     }
