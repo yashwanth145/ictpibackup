@@ -88,7 +88,6 @@ export default function Dashboard() {
 
     const userEmail = auth.user.email.toLowerCase().trim();
 
-    // Find membership_id from member.json
     const entry = Object.entries(memberMap).find(
       ([, mappedEmail]) => mappedEmail.toLowerCase().trim() === userEmail
     );
