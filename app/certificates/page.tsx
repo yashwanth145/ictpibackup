@@ -27,8 +27,6 @@ import logo from "../../assets/ICTPL_image.png"; // adjust path if needed
 // JSON fallback names
 import namesData from "../../public/names.json";
 
-// No date-fns needed here unless you want session badge
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
@@ -53,7 +51,7 @@ export default function Certificates() {
   const [membershipId, setMembershipId] = useState<number | null>(null);
   const [fetchingMember, setFetchingMember] = useState(true);
 
-  // Optional: keep live/upcoming session badge
+  // Optional: session badge features
   const [sessions, setSessions] = useState<any[]>([]);
   const [liveNow, setLiveNow] = useState(false);
   const [nearestFutureSession, setNearestFutureSession] = useState<any | null>(null);
@@ -97,10 +95,10 @@ export default function Certificates() {
           mid = Number(memberData.membership_id);
           setMembershipId(mid);
         } else {
-          console.warn(`No membership record for email: ${userEmail}`);
+          console.warn(`No membership record found for email: ${userEmail}`);
         }
 
-        // 2. Documents if membership_id exists
+        // 2. Fetch documents if we have membership_id
         if (mid) {
           const { data: candidateData } = await supabase
             .from("candidate_exam_schedule")
@@ -155,9 +153,13 @@ export default function Certificates() {
 
     fetchMemberAndDocuments();
 
-    // Optional: Sessions for badge (you can remove if not wanted)
+    // Optional: Fetch sessions for live/upcoming badge
     const fetchSessions = async () => {
-      const { data } = await supabase.from("sessions").select("*").order("sessiondate", { ascending: true });
+      const { data } = await supabase
+        .from("sessions")
+        .select("*")
+        .order("sessiondate", { ascending: true });
+
       if (!data?.length) return;
 
       setSessions(data);
@@ -165,11 +167,16 @@ export default function Certificates() {
       const now = new Date();
       const anyLive = data.some((s: any) => {
         const sesTime = new Date(`${s.sessiondate}T${s.sessiontime}`);
-        return now >= new Date(sesTime.getTime() - 5 * 60 * 1000) && now <= new Date(sesTime.getTime() + 60 * 60 * 1000);
+        return (
+          now >= new Date(sesTime.getTime() - 5 * 60 * 1000) &&
+          now <= new Date(sesTime.getTime() + 60 * 60 * 1000)
+        );
       });
       setLiveNow(anyLive);
 
-      const future = data.find((s: any) => new Date(`${s.sessiondate}T${s.sessiontime}`) > now);
+      const future = data.find(
+        (s: any) => new Date(`${s.sessiondate}T${s.sessiontime}`) > now
+      );
       setNearestFutureSession(future ?? null);
     };
 
@@ -187,6 +194,7 @@ export default function Certificates() {
   if (!auth || auth.loading) {
     return <p className="text-center mt-10 text-gray-600">Loading...</p>;
   }
+
   if (!auth.user) return null;
 
   const handleSignOut = async () => {
@@ -210,7 +218,10 @@ export default function Certificates() {
     ? sessions.find((s: any) => {
         const now = new Date();
         const ses = new Date(`${s.sessiondate}T${s.sessiontime}`);
-        return now >= new Date(ses.getTime() - 5 * 60 * 1000) && now <= new Date(ses.getTime() + 60 * 60 * 1000);
+        return (
+          now >= new Date(ses.getTime() - 5 * 60 * 1000) &&
+          now <= new Date(ses.getTime() + 60 * 60 * 1000)
+        );
       }) ?? null
     : nearestFutureSession;
 
@@ -229,7 +240,7 @@ export default function Certificates() {
       `}</style>
 
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-100">
-        {/* Desktop Sidebar - full links */}
+        {/* Desktop Sidebar */}
         <aside className="hidden md:sticky md:top-0 md:flex md:flex-col md:w-60 md:h-screen md:bg-[#0062cc] md:text-white md:overflow-y-auto scrollbar-hide">
           <nav className="flex-1 mt-4 space-y-3">
             <Link href="/dashboard" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
@@ -256,7 +267,10 @@ export default function Certificates() {
             <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
             </Link>
-            <Link href="/certificates" className="flex items-center px-5 py-2 hover:bg-blue-500 transition bg-blue-700">
+            <Link
+              href="/certificates"
+              className="flex items-center px-5 py-2 hover:bg-blue-500 transition bg-blue-700"
+            >
               <FileCheck className="w-5 h-5 mr-3" /> Certificates
             </Link>
           </nav>
@@ -288,7 +302,10 @@ export default function Certificates() {
           <Link href="/tests" className="flex flex-col items-center text-xs min-w-[52px]">
             <ClipboardPenLine className="w-5 h-5 mb-1" /> Tests
           </Link>
-          <Link href="/certificates" className="flex flex-col items-center text-xs min-w-[52px] bg-blue-700/50 rounded">
+          <Link
+            href="/certificates"
+            className="flex flex-col items-center text-xs min-w-[52px] bg-blue-700/50 rounded"
+          >
             <FileCheck className="w-5 h-5 mb-1" /> Certs
           </Link>
           <button onClick={handleSignOut} className="flex flex-col items-center text-xs min-w-[52px]">
@@ -315,11 +332,16 @@ export default function Certificates() {
                 <div className="text-left min-w-0">
                   {hasSpace ? (
                     <>
-                      <div className="text-base font-semibold text-gray-800 leading-tight">{firstName}</div>
+                      <div className="text-base font-semibold text-gray-800 leading-tight">
+                        {firstName}
+                      </div>
                       {lastName && <div className="text-sm text-gray-600">{lastName}</div>}
                     </>
                   ) : (
-                    <div className="text-base font-semibold text-gray-800 truncate max-w-[180px]" title={fullName}>
+                    <div
+                      className="text-base font-semibold text-gray-800 truncate max-w-[180px]"
+                      title={fullName}
+                    >
                       {fullName}
                     </div>
                   )}
@@ -338,11 +360,14 @@ export default function Certificates() {
             </div>
           </header>
 
-          {/* Optional Live / Upcoming Badge */}
+          {/* Live / Upcoming Session Badge */}
           {badgeSession && (
             <div className="px-4 md:px-8 pt-4">
               <button
-                onClick={() => setShowModal(true) && setSelectedSession(badgeSession)}
+                onClick={() => {
+                  setShowModal(true);
+                  setSelectedSession(badgeSession);
+                }}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-white text-sm font-medium transition ${
                   liveNow ? "bg-green-600 hover:bg-green-700" : "bg-orange-600 hover:bg-orange-700"
                 }`}
@@ -365,7 +390,9 @@ export default function Certificates() {
           {/* Certificates Section */}
           <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto pb-24 md:pb-8 bg-gray-100">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Certificates & Marksheets</h1>
-            <p className="text-gray-600 mb-8">View and download your issued certificates and marksheets.</p>
+            <p className="text-gray-600 mb-8">
+              View and download your issued certificates and marksheets.
+            </p>
 
             {isLoading ? (
               <div className="text-center text-gray-600 py-20">
@@ -377,7 +404,8 @@ export default function Certificates() {
                   Membership record not found
                 </p>
                 <p className="text-lg text-gray-700">
-                  We couldn’t find your membership details for email: <strong>{email}</strong>.<br />
+                  We couldn’t find your membership details for email: <strong>{email}</strong>.
+                  <br />
                   Please contact support or check your profile.
                 </p>
               </div>
@@ -387,8 +415,11 @@ export default function Certificates() {
                   No documents available yet
                 </p>
                 <p className="text-lg text-gray-700 leading-relaxed">
-                  • Final CTPR Certificate will appear here after you qualify.<br />
-                  • MEPSC Marksheet 2025 will be available once uploaded by the admin.<br /><br />
+                  • Final CTPR Certificate will appear here after you qualify.
+                  <br />
+                  • MEPSC Marksheet 2025 will be available once uploaded by the admin.
+                  <br />
+                  <br />
                   Check back later or contact support for status.
                 </p>
               </div>
@@ -431,7 +462,7 @@ export default function Certificates() {
           </main>
         </div>
 
-        {/* Optional Modal for live/upcoming session */}
+        {/* Session Modal */}
         {showModal && selectedSession && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 relative">
