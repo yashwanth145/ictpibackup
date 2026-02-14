@@ -29,18 +29,6 @@ import Image from "next/image";
 import logo from "../../assets/ICTPL_image.png";
 import { supabase } from "@/lib/Supabase";
 
-// Static JSON imports
-import memberMapData from "@/public/member.json";     // membershipId → email
-import namesMapData from "@/public/names.json";       // email → full name
-
-interface MemberMap {
-  [membershipId: string]: string;
-}
-
-interface NamesMap {
-  [email: string]: string;
-}
-
 interface CandidateProfile {
   membership_id: number;
   name: string | null;
@@ -89,12 +77,12 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [displayName, setDisplayName] = useState<string>("User");
-  const [firstName, setFirstName] = useState<string>("");
-  const [lastName, setLastName] = useState<string>("");
-  const [hasSpace, setHasSpace] = useState<boolean>(false);
+  // User data from memberinformation
+  const [fullName, setFullName] = useState<string>("User");
+  const [membershipId, setMembershipId] = useState<number | null>(null);
+  const [userEmail, setUserEmail] = useState<string>("");
 
-  // Profile picture states
+  // Profile picture & upload states
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,10 +105,6 @@ export default function ProfilePage() {
   });
   const [saving, setSaving] = useState(false);
 
-  const memberMap: MemberMap = memberMapData;
-  const namesMap: NamesMap = namesMapData;
-
-  // Allow editing only if ALL editable fields are still empty
   const canEditDetails =
     profile &&
     !profile.date_of_birth &&
@@ -142,56 +126,64 @@ export default function ProfilePage() {
       return;
     }
 
-    const userEmail = auth.user.email.toLowerCase().trim();
+    const currentEmail = auth.user.email.toLowerCase().trim();
+    setUserEmail(currentEmail);
 
-    const nameFromMap = namesMap[userEmail];
-    const rawName = nameFromMap || userEmail.split("@")[0] || "User";
-    setDisplayName(rawName.trim());
-
-    const nameParts = rawName.trim().split(/\s+/);
-    setFirstName(nameParts[0] || "");
-    setLastName(nameParts.slice(1).join(" "));
-    setHasSpace(nameParts.length > 1);
-
-    const membershipIdStr = Object.keys(memberMap).find(
-      (id) => memberMap[id].toLowerCase().trim() === userEmail
-    );
-
-    if (!membershipIdStr) {
-      setError("No membership record found for your account.");
-      setLoading(false);
-      return;
-    }
-
-    const membershipId = Number(membershipIdStr);
-
-    const loadProfileAndImage = async () => {
+    const loadUserAndProfile = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        // Fetch candidate profile
-        const { data, error: supabaseError } = await supabase
-          .from("candidate_exam_schedule")
-          .select("*")
-          .eq("membership_id", membershipId)
+        // 1. Fetch membership_id and name from memberinformation
+        const { data: memberData, error: memberError } = await supabase
+          .from("memberinformation")
+          .select("membership_id, name")
+          .eq("email", currentEmail)
           .maybeSingle();
 
-        if (supabaseError) {
-          console.error("Supabase error loading profile:", supabaseError);
+        if (memberError) {
+          console.error("Error fetching memberinformation:", memberError);
+          setError("Failed to load user record.");
+          return;
+        }
+
+        if (!memberData || !memberData.membership_id) {
+          setError("No membership record found for your account.");
+          return;
+        }
+
+        const mid = Number(memberData.membership_id);
+        setMembershipId(mid);
+
+        // Set name (prefer DB value, fallback to email prefix)
+        const nameFromDb = memberData.name?.trim();
+        const display = nameFromDb && nameFromDb.length > 0
+          ? nameFromDb
+          : currentEmail.split("@")[0] || "User";
+
+        setFullName(display);
+
+        // 2. Fetch candidate profile using membership_id
+        const { data: profileData, error: profileError } = await supabase
+          .from("candidate_exam_schedule")
+          .select("*")
+          .eq("membership_id", mid)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("Profile fetch error:", profileError);
           setError("Failed to load profile data.");
           return;
         }
 
-        if (data) {
-          setProfile(data as CandidateProfile);
+        if (profileData) {
+          setProfile(profileData as CandidateProfile);
         } else {
-          setError("No record found for this Membership ID.");
+          setError("No candidate record found for this Membership ID.");
         }
 
-        // Load profile picture
-        const fileName = `${membershipId}.jpg`;
-
+        // 3. Load profile picture
+        const fileName = `${mid}.jpg`;
         const { data: urlData } = supabase.storage
           .from("profileimages")
           .getPublicUrl(fileName);
@@ -200,34 +192,24 @@ export default function ProfilePage() {
           setProfileImageUrl(`${urlData.publicUrl}?t=${Date.now()}`);
         }
       } catch (err) {
-        console.error("Fetch error:", err);
+        console.error("Load error:", err);
         setError("Network error. Please check your connection.");
       } finally {
         setLoading(false);
       }
     };
 
-    loadProfileAndImage();
+    loadUserAndProfile();
   }, [auth?.user?.email, router]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-
-    const file = e.target.files[0];
-    const userEmail = auth?.user?.email?.toLowerCase()?.trim();
-
-    if (!userEmail) return;
-
-    const membershipIdStr = Object.keys(memberMap).find(
-      (id) => memberMap[id].toLowerCase().trim() === userEmail
-    );
-
-    if (!membershipIdStr) {
-      alert("Cannot upload: membership ID not found.");
+    if (!membershipId) {
+      alert("Membership ID not available.");
       return;
     }
 
-    const membershipId = Number(membershipIdStr);
+    const file = e.target.files[0];
 
     if (!file.type.startsWith("image/")) {
       alert("Please select an image file (jpg, png, webp)");
@@ -247,9 +229,7 @@ export default function ProfilePage() {
 
       const { error: uploadError } = await supabase.storage
         .from("profileimages")
-        .upload(fileName, file, {
-          cacheControl: "3600",
-        });
+        .upload(fileName, file, { cacheControl: "3600" });
 
       if (uploadError) throw uploadError;
 
@@ -259,10 +239,10 @@ export default function ProfilePage() {
 
       if (urlData.publicUrl) {
         setProfileImageUrl(`${urlData.publicUrl}?t=${Date.now()}`);
-        alert("Profile picture updated!");
+        alert("Profile picture updated successfully!");
       }
     } catch (err: any) {
-      console.error("Upload error:", err);
+      console.error("Upload failed:", err);
       alert("Failed to upload image: " + (err.message || "Unknown error"));
     } finally {
       setUploading(false);
@@ -283,7 +263,7 @@ export default function ProfilePage() {
   if (auth?.loading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <p className="text-lg text-black animate-pulse">Loading profile...</p>
+        <p className="text-lg text-gray-600 animate-pulse">Loading profile...</p>
       </div>
     );
   }
@@ -319,7 +299,7 @@ export default function ProfilePage() {
           <Link href="/tests" className="flex items-center px-4 py-3 rounded-lg hover:bg-blue-700/80 transition-colors">
             <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
           </Link>
-          <Link href="/certifictes" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+          <Link href="/certificates" className="flex items-center px-4 py-3 rounded-lg hover:bg-blue-700/80 transition-colors">
             <FileCheck className="w-5 h-5 mr-3" /> Certificates
           </Link>
         </nav>
@@ -327,17 +307,13 @@ export default function ProfilePage() {
 
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0062cc]/95 backdrop-blur-sm text-white flex justify-around items-center py-2 shadow-lg z-50 text-xs">
-        <Link href="/dashboard" className="flex flex-col items-center py-1"><LayoutDashboard className="w-5 h-5 mb-1" /> Dashboard</Link>
+        <Link href="/dashboard" className="flex flex-col items-center py-1"><LayoutDashboard className="w-5 h-5 mb-1" /> Dash</Link>
         <Link href="/results" className="flex flex-col items-center py-1"><ClipboardList className="w-5 h-5 mb-1" /> Results</Link>
         <Link href="/sessions" className="flex flex-col items-center py-1"><ClipboardList className="w-5 h-5 mb-1" /> Sessions</Link>
-        <Link href="/previous" className="flex flex-col items-center py-1"><History className="w-5 h-5 mb-1" /> Previous</Link>
-        <Link href="/vlogs" className="flex flex-col items-center py-1"><ClipboardList className="w-5 h-5 mb-1" /> B/Vlogs</Link>
-        <Link href="/schedule" className="flex flex-col items-center py-1"><GraduationCap className="w-5 h-5 mb-1" /> Exam info</Link>
+        <Link href="/previous" className="flex flex-col items-center py-1"><History className="w-5 h-5 mb-1" /> Prev</Link>
         <Link href="/modelpaper" className="flex flex-col items-center py-1"><ClipboardPenLine className="w-5 h-5 mb-1" /> Papers</Link>
         <Link href="/tests" className="flex flex-col items-center py-1"><ClipboardPenLine className="w-5 h-5 mb-1" /> Tests</Link>
-        <Link href="/certificates" className="flex flex-col items-center text-xs">
-          <FileCheck className="w-5 h-5 mb-1" />Certificates
-        </Link>
+        <Link href="/certificates" className="flex flex-col items-center py-1"><FileCheck className="w-5 h-5 mb-1" /> Certs</Link>
         <button onClick={handleSignOut} className="flex flex-col items-center py-1"><LogOut className="w-5 h-5 mb-1" /> Logout</button>
       </nav>
 
@@ -346,10 +322,10 @@ export default function ProfilePage() {
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white shadow px-4 md:px-6 py-4 sticky top-0 z-40 gap-4">
           <div className="flex items-center gap-4 w-full md:w-auto">
             <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <ArrowLeft className="w-6 h-6 text-black" />
+              <ArrowLeft className="w-6 h-6 text-gray-800" />
             </button>
-            <Image src={logo} alt="Logo" className="h-[60px] w-[60px] md:h-[80px] md:w-[80px]" />
-            <h1 className="text-xl md:text-2xl font-bold text-black">Profile</h1>
+            <Image src={logo} alt="Logo" className="h-16 w-16 md:h-20 md:w-20" />
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800">Profile</h1>
           </div>
 
           <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto justify-end">
@@ -375,7 +351,7 @@ export default function ProfilePage() {
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium shadow-sm whitespace-nowrap"
               >
                 <ClipboardPenLine className="w-4 h-4" />
-                <span className="hidden sm:inline">Edit Profile Information</span>
+                <span className="hidden sm:inline">Edit Profile</span>
               </button>
             )}
 
@@ -391,17 +367,11 @@ export default function ProfilePage() {
 
         <main className="flex-1 p-5 md:p-8">
           <div className="max-w-5xl mx-auto space-y-8">
-            {/* Profile Picture Section */}
+            {/* Profile Picture & Basic Info */}
             <div className="text-center">
               <div className="relative inline-block group mx-auto">
                 <div
-                  className={`
-                    w-32 h-32 md:w-40 md:h-40
-                    rounded-full overflow-hidden
-                    border-4 border-blue-100 bg-gray-100
-                    flex items-center justify-center shadow-md
-                    mx-auto
-                  `}
+                  className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-blue-100 bg-gray-100 flex items-center justify-center shadow-md mx-auto"
                 >
                   {profileImageUrl ? (
                     <Image
@@ -418,17 +388,17 @@ export default function ProfilePage() {
                 </div>
 
                 <label
-                  htmlFor="profile-upload-big"
+                  htmlFor="profile-upload"
                   className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                 >
                   <div className="flex flex-col items-center text-white text-xs">
                     <Camera className="w-8 h-8 mb-1" />
-                    <span>Change photo</span>
+                    <span>Change</span>
                   </div>
                 </label>
 
                 <input
-                  id="profile-upload-big"
+                  id="profile-upload"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   ref={fileInputRef}
@@ -438,18 +408,16 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <h2 className="mt-4 text-xl md:text-2xl font-bold text-black">
-                {displayName}
+              <h2 className="mt-4 text-2xl md:text-3xl font-bold text-gray-900">
+                {fullName}
               </h2>
 
               <p className="text-sm text-gray-600 mt-1">
-                Membership ID: {profile ? String(profile.membership_id).padStart(5, "0") : "—"}
+                Membership ID: {membershipId ? String(membershipId).padStart(5, "0") : "—"}
               </p>
 
               {uploading && (
-                <p className="mt-2 text-sm text-blue-600 animate-pulse">
-                  Uploading...
-                </p>
+                <p className="mt-2 text-sm text-blue-600 animate-pulse">Uploading photo...</p>
               )}
             </div>
 
@@ -460,58 +428,58 @@ export default function ProfilePage() {
             ) : profile ? (
               <>
                 {/* Personal Information */}
-                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8 text-black">
-                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
+                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
                     <User className="w-6 h-6 text-blue-600" />
                     Personal Information
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div><p className="text-sm text-black">Full Name</p><p className="font-medium text-lg">{profile.name || "—"}</p></div>
-                    <div><p className="text-sm text-black">Display Name</p><p className="font-medium text-lg">{displayName}</p></div>
-                    <div><p className="text-sm text-black">Date of Birth</p><p className="font-medium text-lg">{profile.date_of_birth || "—"}</p></div>
-                    <div><p className="text-sm text-black">Father's Name</p><p className="font-medium text-lg">{profile.father_name || "—"}</p></div>
-                    <div><p className="text-sm text-black">Mother's Name</p><p className="font-medium text-lg">{profile.mother_name || "—"}</p></div>
-                    <div><p className="text-sm text-black">IT PAN</p><p className="font-medium text-lg font-mono">{profile.it_pan || "—"}</p></div>
-                    <div><p className="text-sm text-black">Aadhaar Number</p><p className="font-medium text-lg font-mono">{profile.aadhar || "—"}</p></div>
-                    <div><p className="text-sm text-black">Voter ID</p><p className="font-medium text-lg font-mono">{profile.voter || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Full Name</p><p className="font-medium text-lg">{profile.name || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Display Name</p><p className="font-medium text-lg">{fullName}</p></div>
+                    <div><p className="text-sm text-gray-600">Date of Birth</p><p className="font-medium text-lg">{profile.date_of_birth || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Father's Name</p><p className="font-medium text-lg">{profile.father_name || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Mother's Name</p><p className="font-medium text-lg">{profile.mother_name || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">IT PAN</p><p className="font-medium text-lg font-mono">{profile.it_pan || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Aadhaar Number</p><p className="font-medium text-lg font-mono">{profile.aadhar || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Voter ID</p><p className="font-medium text-lg font-mono">{profile.voter || "—"}</p></div>
                   </div>
                 </section>
 
                 {/* Address Information */}
-                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8 text-black">
-                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
+                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
                     <MapPin className="w-6 h-6 text-blue-600" />
                     Address & Location
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="md:col-span-2"><p className="text-sm text-black">Full Address</p><p className="font-medium text-lg">{profile.address || "—"}</p></div>
-                    <div><p className="text-sm text-black">District</p><p className="font-medium text-lg">{profile.district || "—"}</p></div>
-                    <div><p className="text-sm text-black">State</p><p className="font-medium text-lg">{profile.state || "—"}</p></div>
-                    <div><p className="text-sm text-black">Place</p><p className="font-medium text-lg">{profile.place || "—"}</p></div>
-                    <div><p className="text-sm text-black">Pincode</p><p className="font-medium text-lg">{profile.pincode || "—"}</p></div>
+                    <div className="md:col-span-2"><p className="text-sm text-gray-600">Full Address</p><p className="font-medium text-lg">{profile.address || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">District</p><p className="font-medium text-lg">{profile.district || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">State</p><p className="font-medium text-lg">{profile.state || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Place</p><p className="font-medium text-lg">{profile.place || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Pincode</p><p className="font-medium text-lg">{profile.pincode || "—"}</p></div>
                   </div>
                 </section>
 
                 {/* Batch & Qualification */}
-                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8 text-black">
-                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
+                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
                     <Building className="w-6 h-6 text-blue-600" />
                     Batch & Qualification Details
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div><p className="text-sm text-black">Membership ID</p><p className="font-medium text-lg font-mono">{String(profile.membership_id).padStart(5, "0")}</p></div>
-                    <div><p className="text-sm text-black">Candidate ID</p><p className="font-medium text-lg font-mono">{profile.can_id || "—"}</p></div>
-                    <div><p className="text-sm text-black">Batch ID</p><p className="font-medium text-lg font-mono">{profile.batch_id || "—"}</p></div>
-                    <div><p className="text-sm text-black">Batch Name</p><p className="font-medium text-lg">{profile.batch_name || "—"}</p></div>
-                    <div><p className="text-sm text-black">Qualification Status</p><p className="font-medium text-lg font-semibold text-green-700">{profile.qualification_status || "—"}</p></div>
-                    <div><p className="text-sm text-black">Joined</p><p className="font-medium text-lg">{profile.joined || "—"}</p></div>
-                    <div><p className="text-sm text-black">Completed</p><p className="font-medium text-lg">{profile.completed || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Membership ID</p><p className="font-medium text-lg font-mono">{String(profile.membership_id).padStart(5, "0")}</p></div>
+                    <div><p className="text-sm text-gray-600">Candidate ID</p><p className="font-medium text-lg font-mono">{profile.can_id || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Batch ID</p><p className="font-medium text-lg font-mono">{profile.batch_id || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Batch Name</p><p className="font-medium text-lg">{profile.batch_name || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Qualification Status</p><p className="font-medium text-lg font-semibold text-green-700">{profile.qualification_status || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Joined</p><p className="font-medium text-lg">{profile.joined || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Completed</p><p className="font-medium text-lg">{profile.completed || "—"}</p></div>
                   </div>
                 </section>
 
                 {/* Exam Status & Certificates */}
-                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8 text-black">
-                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
+                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
                     <Award className="w-6 h-6 text-blue-600" />
                     Exam Status & Certificates
                   </h2>
@@ -534,27 +502,27 @@ export default function ProfilePage() {
                           key={item.key}
                           className="border rounded-xl p-6 hover:shadow-md transition-all bg-gray-50/60"
                         >
-                          <h3 className="font-semibold text-black mb-4 text-lg">{item.label}</h3>
+                          <h3 className="font-semibold mb-4 text-lg">{item.label}</h3>
 
                           <div className="space-y-3">
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-black">Status:</span>
+                              <span className="text-sm text-gray-600">Status:</span>
                               {status ? (
                                 <div className="flex items-center gap-2">
                                   {isPass ? <CheckCircle2 className="w-5 h-5 text-green-600" /> :
                                    isFail ? <XCircle className="w-5 h-5 text-red-600" /> :
                                    <Calendar className="w-5 h-5 text-amber-600" />}
-                                  <span className={`font-medium ${isPass ? "text-green-700" : isFail ? "text-red-700" : "text-black"}`}>
+                                  <span className={`font-medium ${isPass ? "text-green-700" : isFail ? "text-red-700" : "text-gray-800"}`}>
                                     {status}
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-black">Not attempted</span>
+                                <span className="text-gray-600">Not attempted</span>
                               )}
                             </div>
 
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-black">Certificate:</span>
+                              <span className="text-sm text-gray-600">Certificate:</span>
                               {url ? (
                                 <a
                                   href={url}
@@ -566,7 +534,7 @@ export default function ProfilePage() {
                                   View / Download
                                 </a>
                               ) : (
-                                <span className="text-black">Not available</span>
+                                <span className="text-gray-600">Not available</span>
                               )}
                             </div>
                           </div>
@@ -577,8 +545,8 @@ export default function ProfilePage() {
                 </section>
 
                 {/* Additional Information & Links */}
-                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8 text-black">
-                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
+                <section className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
                     <BookOpen className="w-6 h-6 text-blue-600" />
                     Additional Information & Links
                   </h2>
@@ -590,9 +558,9 @@ export default function ProfilePage() {
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div><p className="text-sm text-black">Exam Date</p><p className="font-medium text-lg">{profile.exam_date || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">Exam Date</p><p className="font-medium text-lg">{profile.exam_date || "—"}</p></div>
                     <div>
-                      <p className="text-sm text-black">Fellowship Link</p>
+                      <p className="text-sm text-gray-600">Fellowship Link</p>
                       <p className="font-medium text-lg">
                         {profile.fellowship_link ? (
                           <a href={profile.fellowship_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
@@ -601,12 +569,12 @@ export default function ProfilePage() {
                         ) : "—"}
                       </p>
                     </div>
-                    <div><p className="text-sm text-black">NCVET</p><p className="font-medium text-lg">{profile.ncvet || "—"}</p></div>
-                    <div><p className="text-sm text-black">GSTP</p><p className="font-medium text-lg">{profile.gstp || "—"}</p></div>
-                    <div><p className="text-sm text-black">ITP</p><p className="font-medium text-lg">{profile.itp || "—"}</p></div>
-                    <div><p className="text-sm text-black">SIDH</p><p className="font-medium text-lg">{profile.sidh || "—"}</p></div>
-                    <div><p className="text-sm text-black">STP</p><p className="font-medium text-lg">{profile.stp || "—"}</p></div>
-                    <div><p className="text-sm text-black">CB</p><p className="font-medium text-lg">{profile.cb || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">NCVET</p><p className="font-medium text-lg">{profile.ncvet || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">GSTP</p><p className="font-medium text-lg">{profile.gstp || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">ITP</p><p className="font-medium text-lg">{profile.itp || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">SIDH</p><p className="font-medium text-lg">{profile.sidh || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">STP</p><p className="font-medium text-lg">{profile.stp || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">CB</p><p className="font-medium text-lg">{profile.cb || "—"}</p></div>
                   </div>
                 </section>
               </>
@@ -618,14 +586,12 @@ export default function ProfilePage() {
           </div>
         </main>
 
-        {/* ────────────────────────────────────────────────
-            EDIT MODAL (one-time use for personal + certificate info)
-        ──────────────────────────────────────────────── */}
+        {/* Edit Modal */}
         {isEditModalOpen && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">Update Profile & Certificate Details</h3>
+                <h3 className="text-2xl font-bold text-gray-900">Update Profile Details</h3>
                 <button
                   onClick={() => setIsEditModalOpen(false)}
                   className="p-2 hover:bg-gray-100 rounded-full transition"
@@ -635,11 +601,11 @@ export default function ProfilePage() {
               </div>
 
               <p className="text-sm text-red-600 mb-6 leading-relaxed">
-                <strong>Important:</strong> These details can be filled <strong>only once</strong>.<br />
-                Please enter all information carefully — especially government IDs and certificate numbers.
+                <strong>Important:</strong> These fields can be filled <strong>only once</strong>.<br />
+                Please enter accurate information — especially IDs and certificate numbers.
               </p>
 
-              <div className="space-y-6 text-black">
+              <div className="space-y-6">
                 {/* Personal Identity */}
                 <div className="border-b pb-5">
                   <h4 className="text-lg font-semibold mb-4 text-gray-800">Personal Identity</h4>
@@ -652,33 +618,25 @@ export default function ProfilePage() {
                         type="date"
                         value={profileForm.date_of_birth}
                         onChange={(e) => setProfileForm({ ...profileForm, date_of_birth: e.target.value })}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-800 mb-1.5">
-                        Father's Name
-                      </label>
+                      <label className="block text-sm font-medium text-gray-800 mb-1.5">Father's Name</label>
                       <input
                         type="text"
                         value={profileForm.father_name}
                         onChange={(e) => setProfileForm({ ...profileForm, father_name: e.target.value.trim() })}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                        placeholder="Full name"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-800 mb-1.5">
-                        Mother's Name
-                      </label>
+                      <label className="block text-sm font-medium text-gray-800 mb-1.5">Mother's Name</label>
                       <input
                         type="text"
                         value={profileForm.mother_name}
                         onChange={(e) => setProfileForm({ ...profileForm, mother_name: e.target.value.trim() })}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                        placeholder="Full name"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -689,43 +647,35 @@ export default function ProfilePage() {
                   <h4 className="text-lg font-semibold mb-4 text-gray-800">Government IDs</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-sm font-medium text-gray-800 mb-1.5">
-                        IT PAN
-                      </label>
+                      <label className="block text-sm font-medium text-gray-800 mb-1.5">IT PAN</label>
                       <input
                         type="text"
                         value={profileForm.it_pan}
                         onChange={(e) => setProfileForm({ ...profileForm, it_pan: e.target.value.trim().toUpperCase() })}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition font-mono uppercase"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono uppercase"
                         placeholder="ABCDE1234F"
                         maxLength={10}
                       />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-800 mb-1.5">
-                        Aadhaar Number
-                      </label>
+                      <label className="block text-sm font-medium text-gray-800 mb-1.5">Aadhaar Number</label>
                       <input
                         type="text"
                         value={profileForm.aadhar}
                         onChange={(e) => setProfileForm({ ...profileForm, aadhar: e.target.value.trim() })}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition font-mono"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                         placeholder="XXXX XXXX XXXX"
                         maxLength={14}
                       />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-800 mb-1.5">
-                        Voter ID
-                      </label>
+                      <label className="block text-sm font-medium text-gray-800 mb-1.5">Voter ID</label>
                       <input
                         type="text"
                         value={profileForm.voter}
                         onChange={(e) => setProfileForm({ ...profileForm, voter: e.target.value.trim().toUpperCase() })}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition font-mono uppercase"
-                        placeholder="e.g. ABC1234567"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono uppercase"
+                        placeholder="ABC1234567"
                       />
                     </div>
                   </div>
@@ -744,16 +694,12 @@ export default function ProfilePage() {
                       { label: "CB Licence No", key: "cb" },
                     ].map(({ label, key }) => (
                       <div key={key}>
-                        <label className="block text-sm font-medium text-gray-800 mb-1.5">
-                          {label}
-                        </label>
+                        <label className="block text-sm font-medium text-gray-800 mb-1.5">{label}</label>
                         <input
                           type="text"
                           value={profileForm[key as keyof typeof profileForm] || ""}
-                          onChange={(e) =>
-                            setProfileForm({ ...profileForm, [key]: e.target.value.trim() })
-                          }
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                          onChange={(e) => setProfileForm({ ...profileForm, [key]: e.target.value.trim() })}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="Enter number"
                         />
                       </div>
@@ -766,7 +712,7 @@ export default function ProfilePage() {
                 <button
                   onClick={() => setIsEditModalOpen(false)}
                   disabled={saving}
-                  className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-60 text-black"
+                  className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-60"
                 >
                   Cancel
                 </button>
@@ -776,8 +722,7 @@ export default function ProfilePage() {
                     setSaving(true);
 
                     try {
-                      const membershipId = profile?.membership_id;
-                      if (!membershipId) throw new Error("No membership ID found");
+                      if (!membershipId) throw new Error("No membership ID");
 
                       const updates = {
                         date_of_birth: profileForm.date_of_birth || null,
@@ -801,18 +746,12 @@ export default function ProfilePage() {
 
                       if (error) throw error;
 
-                      // Update local state
-                      setProfile((prev) =>
-                        prev
-                          ? { ...prev, ...updates }
-                          : null
-                      );
-
-                      alert("Profile and certificate details saved successfully!");
+                      setProfile((prev) => (prev ? { ...prev, ...updates } : null));
+                      alert("Details saved successfully!");
                       setIsEditModalOpen(false);
                     } catch (err: any) {
-                      console.error("Save error:", err);
-                      alert("Failed to save details: " + (err.message || "Unknown error"));
+                      console.error("Save failed:", err);
+                      alert("Failed to save: " + (err.message || "Unknown error"));
                     } finally {
                       setSaving(false);
                     }

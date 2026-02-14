@@ -1,4 +1,5 @@
 "use client";
+
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -16,15 +17,7 @@ import {
 import Image from "next/image";
 import logo from "../../assets/ICTPL_image.png";
 import { supabase } from "@/lib/Supabase";
-import memberMapData from "@/public/member.json";     // membershipId → email
-import namesMapData from "@/public/names.json";       // email → name
 
-interface MemberMap {
-  [membershipId: string]: string;
-}
-interface NamesMap {
-  [email: string]: string;
-}
 interface Candidate {
   membership_id: number;
   name: string;
@@ -40,16 +33,16 @@ interface Candidate {
 }
 
 const MOCK_EXAM_LINK = "https://test.tallyeducation.com/links/a4ffec55-f3a8-11f0-8447-0ac472d4f9eb/";
-const FINAL_CTPR_LINK = "https://test.tallyeducation.com/links/96dcca2f-f68e-11f0-bcaf-06ac946976b1/"; // ← CHANGE THIS if different!
+const FINAL_CTPR_LINK = "https://test.tallyeducation.com/links/96dcca2f-f68e-11f0-bcaf-06ac946976b1/";
 
 const ResultPage = () => {
   const auth = useAuth();
   const router = useRouter();
+
   const [candidate, setCandidate] = useState<Candidate | null>(null);
+  const [fullName, setFullName] = useState<string>("User");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [memberMap] = useState<MemberMap>(memberMapData);
-  const [namesMap] = useState<NamesMap>(namesMapData);
 
   useEffect(() => {
     if (auth && !auth.loading && !auth.user) {
@@ -58,26 +51,44 @@ const ResultPage = () => {
   }, [auth, router]);
 
   useEffect(() => {
-    if (!auth?.user?.email || Object.keys(memberMap).length === 0) return;
+    if (!auth?.user?.email) return;
 
-    async function fetchCandidate() {
+    const currentEmail = auth.user.email.toLowerCase().trim();
+
+    const fetchUserAndResults = async () => {
       setLoading(true);
       setError(null);
-      const userEmail = auth.user?.email?.toLowerCase().trim();
-
-      const membershipIdStr = Object.keys(memberMap).find(
-        (id) => memberMap[id].toLowerCase().trim() === userEmail
-      );
-
-      if (!membershipIdStr) {
-        setError("No membership record found for your account.");
-        setLoading(false);
-        return;
-      }
-
-      const membershipId = Number(membershipIdStr);
 
       try {
+        // 1. Fetch membership_id and name from memberinformation
+        const { data: member, error: memberError } = await supabase
+          .from("memberinformation")
+          .select("membership_id, name")
+          .eq("email", currentEmail)
+          .maybeSingle();
+
+        if (memberError) {
+          console.error("Error fetching memberinformation:", memberError);
+          setError("Failed to load user record.");
+          return;
+        }
+
+        if (!member || !member.membership_id) {
+          setError("No membership record found for your account.");
+          return;
+        }
+
+        const mid = Number(member.membership_id);
+
+        // Set name (prefer DB → fallback to email prefix)
+        const nameFromDb = member.name?.trim();
+        setFullName(
+          nameFromDb && nameFromDb.length > 0
+            ? nameFromDb
+            : currentEmail.split("@")[0] || "User"
+        );
+
+        // 2. Fetch candidate exam results
         const { data, error: supabaseError } = await supabase
           .from("candidate_exam_schedule")
           .select(`
@@ -93,14 +104,14 @@ const ResultPage = () => {
             mock_certificate_url,
             final_ctpr_certificate_url
           `)
-          .eq("membership_id", membershipId)
+          .eq("membership_id", mid)
           .maybeSingle();
 
         if (supabaseError) {
           console.error("Supabase error:", supabaseError);
           setError("Failed to load results. Please try again later.");
         } else if (data) {
-          setCandidate(data);
+          setCandidate(data as Candidate);
         } else {
           setError("No exam results found for your Membership ID.");
         }
@@ -110,10 +121,10 @@ const ResultPage = () => {
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    fetchCandidate();
-  }, [auth?.user?.email, memberMap]);
+    fetchUserAndResults();
+  }, [auth?.user?.email]);
 
   const handleSignOut = async () => {
     try {
@@ -146,13 +157,6 @@ const ResultPage = () => {
 
   const shouldShowAttendLink = (status?: string) =>
     !status || status.trim().toUpperCase() !== "COMPLETED";
-
-  const getUserDisplayName = () => {
-    const userEmail = auth?.user?.email?.toLowerCase().trim();
-    return userEmail && namesMap[userEmail]
-      ? namesMap[userEmail]
-      : auth?.user?.email?.split("@")[0] || "User";
-  };
 
   const completedLevels = candidate
     ? [
@@ -206,8 +210,8 @@ const ResultPage = () => {
           <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
             <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
           </Link>
-          <Link href="/certifictes" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-             <FileCheck className="w-5 h-5 mr-3" /> Certificates
+          <Link href="/certificates" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+            <FileCheck className="w-5 h-5 mr-3" /> Certificates
           </Link>
         </nav>
       </aside>
@@ -233,8 +237,8 @@ const ResultPage = () => {
           <ClipboardPenLine className="w-5 h-5 mb-1" /> Tests
         </Link>
         <Link href="/certificates" className="flex flex-col items-center text-xs">
-            <FileCheck className="w-5 h-5 mb-1" />Certificates
-          </Link>
+          <FileCheck className="w-5 h-5 mb-1" /> Certs
+        </Link>
         <button onClick={handleSignOut} className="flex flex-col items-center py-1">
           <LogOut className="w-5 h-5 mb-1" /> Logout
         </button>
@@ -248,7 +252,7 @@ const ResultPage = () => {
             <div className="flex items-center gap-2">
               <User2 className="w-5 h-5 text-gray-700" />
               <div className="text-sm text-gray-800 text-right">
-                <div className="font-semibold">{getUserDisplayName()}</div>
+                <div className="font-semibold">{fullName}</div>
               </div>
             </div>
             <button
@@ -278,7 +282,7 @@ const ResultPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                   <div className="bg-blue-600 text-white text-center py-4 rounded-lg shadow">
                     <p className="text-sm font-semibold">NAME</p>
-                    <p className="text-sm font-bold mt-2">{candidate.name}</p>
+                    <p className="text-sm font-bold mt-2">{candidate.name || fullName}</p>
                   </div>
                   <div className="bg-blue-600 text-white text-center py-4 rounded-lg shadow">
                     <p className="text-sm font-semibold">MEMBERSHIP ID</p>
@@ -288,7 +292,7 @@ const ResultPage = () => {
                   </div>
                   <div className="bg-blue-600 text-white text-center py-4 rounded-lg shadow">
                     <p className="text-sm font-semibold">CANDIDATE ID</p>
-                    <p className="text-sm font-bold mt-2">{candidate.can_id}</p>
+                    <p className="text-sm font-bold mt-2">{candidate.can_id || "—"}</p>
                   </div>
                 </div>
 
@@ -316,7 +320,7 @@ const ResultPage = () => {
                         🎉 FULLY QUALIFIED – All Levels Completed!
                       </div>
                     ) : (
-                      <p className="text-xl font-semibold text-black bold">
+                      <p className="text-xl font-semibold text-gray-900">
                         Current Status: {completedLevels} of {totalLevels} levels passed
                       </p>
                     )}
@@ -329,7 +333,7 @@ const ResultPage = () => {
                   </h2>
                 </div>
 
-                {/* Optional – keep or remove this banner */}
+                {/* Optional banner – keep or remove */}
                 <div className="text-center mb-10">
                   <h2 className="italic text-xl md:text-2xl font-bold text-white bg-purple-700 inline-block px-6 py-2 rounded-full shadow-lg">
                     MOCK EXAM IN PROGRESS

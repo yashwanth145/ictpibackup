@@ -1,4 +1,5 @@
 "use client";
+
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -13,7 +14,7 @@ import {
   History,
   GraduationCap,
   ClipboardPenLine,
-  FileCheck
+  FileCheck,
 } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@supabase/supabase-js";
@@ -29,16 +30,6 @@ import logo from "../../assets/ICTPL_image.png";
 import { format, addMinutes, isWithinInterval } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 
-import emailNamePairs from "../../public/names.json";
-
-interface Session {
-  sessionid: number;
-  sessiontitle: string;
-  sessiondate: string;
-  sessiontime: string;
-  sessionlink: string;
-}
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
@@ -50,12 +41,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-const emailToName = new Map<string, string>();
-Object.entries(emailNamePairs as Record<string, string>).forEach(
-  ([email, name]) => {
-    emailToName.set(email.toLowerCase(), name);
-  }
-);
+interface Session {
+  sessionid: number;
+  sessiontitle: string;
+  sessiondate: string;
+  sessiontime: string;
+  sessionlink: string;
+}
 
 export default function Dashboard() {
   const auth = useAuth() as any;
@@ -66,6 +58,12 @@ export default function Dashboard() {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [liveNow, setLiveNow] = useState(false);
   const [nearestFutureSession, setNearestFutureSession] = useState<Session | null>(null);
+
+  // User data from DB
+  const [fullName, setFullName] = useState<string>("User");
+  const [userEmail, setUserEmail] = useState<string>("No email");
+  const [membershipId, setMembershipId] = useState<number | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
   const isSessionLiveNow = (s: Session): boolean => {
     const now = toZonedTime(new Date(), "Asia/Kolkata");
@@ -79,53 +77,123 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const fetchSessions = async () => {
-      const { data, error } = await supabase.from("sessions").select("*");
-      if (error) {
-        console.error("Supabase error:", error);
-        return;
+    if (!auth?.user) return;
+
+    const currentUserEmail = auth.user.email?.toLowerCase()?.trim() || "";
+
+    const fetchUserAndSessions = async () => {
+      setLoadingUser(true);
+
+      try {
+        // 1. Fetch user info from memberinformation
+        const { data: member, error: memberError } = await supabase
+          .from("memberinformation")
+          .select("membership_id, name, email")
+          .eq("email", currentUserEmail)
+          .maybeSingle();
+
+        if (memberError) {
+          console.error("Error fetching memberinformation:", memberError);
+        }
+
+        if (member) {
+          setMembershipId(Number(member.membership_id));
+          setUserEmail(member.email?.toLowerCase() || currentUserEmail);
+
+          const nameFromDb = member.name?.trim();
+          setFullName(
+            nameFromDb && nameFromDb.length > 0
+              ? nameFromDb
+              : currentUserEmail.split("@")[0] || "User"
+          );
+        } else {
+          console.warn(`No member record found for email: ${currentUserEmail}`);
+          setFullName(currentUserEmail.split("@")[0] || "User");
+          setUserEmail(currentUserEmail);
+        }
+
+        // 2. Fetch sessions
+        const { data, error } = await supabase.from("sessions").select("*");
+        if (error) {
+          console.error("Supabase sessions error:", error);
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          setSessions([]);
+          return;
+        }
+
+        const sorted = (data as Session[]).sort((a, b) => {
+          const da = new Date(`${a.sessiondate}T${a.sessiontime}`).getTime();
+          const db = new Date(`${b.sessiondate}T${b.sessiontime}`).getTime();
+          return da - db;
+        });
+
+        setSessions(sorted);
+
+        const anyLive = sorted.some(isSessionLiveNow);
+        setLiveNow(anyLive);
+
+        const now = new Date();
+        const future = sorted.find(
+          (s) => new Date(`${s.sessiondate}T${s.sessiontime}`) > now
+        );
+        setNearestFutureSession(future ?? null);
+      } catch (err) {
+        console.error("Fetch failed:", err);
+      } finally {
+        setLoadingUser(false);
       }
-      if (!data || data.length === 0) {
-        setSessions([]);
-        return;
-      }
-
-      const sorted = (data as Session[]).sort((a, b) => {
-        const da = new Date(`${a.sessiondate}T${a.sessiontime}`).getTime();
-        const db = new Date(`${b.sessiondate}T${b.sessiontime}`).getTime();
-        return da - db;
-      });
-
-      setSessions(sorted);
-      const anyLive = sorted.some(isSessionLiveNow);
-      setLiveNow(anyLive);
-
-      const now = new Date();
-      const future = sorted.find(
-        (s) => new Date(`${s.sessiondate}T${s.sessiontime}`) > now
-      );
-      setNearestFutureSession(future ?? null);
     };
 
-    if (auth?.user) {
-      fetchSessions();
-      const id = setInterval(fetchSessions, 30000);
-      return () => clearInterval(id);
-    }
+    fetchUserAndSessions();
+
+    const interval = setInterval(() => {
+      // Only refetch sessions periodically, not user info
+      supabase
+        .from("sessions")
+        .select("*")
+        .then(({ data, error }) => {
+          if (!error && data) {
+            const sorted = (data as Session[]).sort((a, b) => {
+              const da = new Date(`${a.sessiondate}T${a.sessiontime}`).getTime();
+              const db = new Date(`${b.sessiondate}T${b.sessiontime}`).getTime();
+              return da - db;
+            });
+            setSessions(sorted);
+
+            const anyLive = sorted.some(isSessionLiveNow);
+            setLiveNow(anyLive);
+
+            const now = new Date();
+            const future = sorted.find(
+              (s) => new Date(`${s.sessiondate}T${s.sessiontime}`) > now
+            );
+            setNearestFutureSession(future ?? null);
+          }
+        });
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [auth?.user]);
 
   useEffect(() => {
-    if (!auth) return;
-    if (!auth.loading && !auth.user) router.push("/");
+    if (!auth?.loading && !auth?.user) {
+      router.push("/");
+    }
   }, [auth, router]);
 
-  if (!auth || auth.loading)
+  if (!auth || auth.loading || loadingUser) {
     return <p className="text-center mt-10 text-gray-600">Loading...</p>;
+  }
+
   if (!auth.user) return null;
 
   const handleSignOut = async () => {
     try {
       await auth.signOut?.();
+      await supabase.auth.signOut();
       router.push("/");
     } catch (e) {
       console.error("Sign out failed:", e);
@@ -136,39 +204,26 @@ export default function Dashboard() {
     setSelectedSession(s);
     setShowModal(true);
   };
+
   const closeModal = () => {
     setShowModal(false);
     setSelectedSession(null);
   };
 
-  const courses = [
-    { title: "Indirect Tax Laws Compliance (ITXL)", route: "indirecttax", image: accountancy },
-    { title: "Business Regulatory Laws Compliance(BRLC)", route: "business", image: complaince },
-    { title: "Direct Tax Laws Compliance (DTLC)", route: "directtax", image: directax },
-    { title: "Applied Financial Accounting & Ethics(AFAE)", route: "appliedfinance", image: appliedfinance },
-  ];
+  const nameParts = fullName.split(/\s+/);
+  const firstName = nameParts[0];
+  const lastName = nameParts.slice(1).join(" ");
+  const hasSpace = nameParts.length > 1;
 
   const liveSessions = sessions.filter(isSessionLiveNow);
   const badgeSession = liveNow ? liveSessions[0] ?? null : nearestFutureSession;
 
-  const getUserDisplayName = () => {
-    const userEmail = auth.user?.email?.toLowerCase();
-    if (userEmail && emailToName.has(userEmail)) {
-      return emailToName.get(userEmail)!;
-    }
-    return auth.user?.email?.split("@")[0] || "User";
-  };
-
-  const getUserEmail = () => {
-    return auth.user?.email?.toLowerCase() || "No email";
-  };
-
-  const fullName = getUserDisplayName().trim();
-  const email = getUserEmail();
-  const hasSpace = fullName.includes(" ");
-  const nameParts = fullName.split(" ");
-  const firstName = nameParts[0];
-  const lastName = nameParts.slice(1).join(" ");
+  const courses = [
+    { title: "Indirect Tax Laws Compliance (ITLC)", route: "indirecttax", image: accountancy },
+    { title: "Business Regulatory Laws Compliance (BRLC)", route: "business", image: complaince },
+    { title: "Direct Tax Laws Compliance (DTLC)", route: "directtax", image: directax },
+    { title: "Applied Financial Accounting & Ethics (AFAE)", route: "appliedfinance", image: appliedfinance },
+  ];
 
   return (
     <>
@@ -210,7 +265,7 @@ export default function Dashboard() {
             <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
             </Link>
-            <Link href="/certifictes" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+            <Link href="/certificats" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <FileCheck className="w-5 h-5 mr-3" /> Certificates
             </Link>
           </nav>
@@ -243,7 +298,7 @@ export default function Dashboard() {
             <ClipboardPenLine className="w-5 h-5 mb-1" /> Tests
           </Link>
           <Link href="/certificates" className="flex flex-col items-center text-xs">
-            <FileCheck className="w-5 h-5 mb-1" />Certificates
+            <FileCheck className="w-5 h-5 mb-1" /> Certs
           </Link>
           <button onClick={handleSignOut} className="flex flex-col items-center text-xs">
             <LogOut className="w-5 h-5 mb-1" /> Logout
@@ -253,12 +308,10 @@ export default function Dashboard() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white shadow px-4 md:px-6 py-4 sticky top-0 z-40 gap-4">
-            {/* Left: Logo */}
             <div className="flex items-center gap-4">
               <Image src={logo} alt="Logo" className="h-16 w-16 md:h-24 md:w-24" />
             </div>
 
-            {/* Right: User info + Sign out */}
             <div className="flex items-center gap-5 md:gap-8">
               <button
                 onClick={() => router.push("/profile")}
@@ -275,9 +328,7 @@ export default function Dashboard() {
                       <div className="text-base font-semibold text-gray-800 leading-tight">
                         {firstName}
                       </div>
-                      {lastName && (
-                        <div className="text-sm text-gray-600">{lastName}</div>
-                      )}
+                      {lastName && <div className="text-sm text-gray-600">{lastName}</div>}
                     </>
                   ) : (
                     <div
@@ -287,18 +338,12 @@ export default function Dashboard() {
                       {fullName}
                     </div>
                   )}
-
-                  {/* Email on the next line */}
-                  <div
-                    className="text-xs text-gray-500 mt-0.5 truncate max-w-[220px]"
-                    title={email}
-                  >
-                    {email}
+                  <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[220px]" title={userEmail}>
+                    {userEmail}
                   </div>
                 </div>
               </button>
 
-              {/* Sign Out Button */}
               <button
                 onClick={handleSignOut}
                 className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition text-sm font-medium shadow-sm"
@@ -313,8 +358,9 @@ export default function Dashboard() {
             <div className="px-4 md:px-8 pt-4">
               <button
                 onClick={() => openModal(badgeSession)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-white text-sm font-medium transition
-                  ${liveNow ? "bg-green-600 hover:bg-green-700" : "bg-orange-600 hover:bg-orange-700"}`}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-white text-sm font-medium transition ${
+                  liveNow ? "bg-green-600 hover:bg-green-700" : "bg-orange-600 hover:bg-orange-700"
+                }`}
               >
                 {liveNow ? (
                   <>

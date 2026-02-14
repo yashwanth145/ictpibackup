@@ -18,16 +18,13 @@ import {
   History,
   GraduationCap,
   ClipboardPenLine,
-  FileCheck
+  FileCheck,
 } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@supabase/supabase-js";
 
 /* ─────── Assets ─────── */
 import logo from "../../assets/ICTPL_image.png";
-
-/* ─────── NEW ─────── */
-import emailNamePairs from "../../public/names.json";
 
 /* ─────── Types ─────── */
 interface Session {
@@ -50,12 +47,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-/* ─────── Email to Name Map ─────── */
-const emailToName = new Map<string, string>();
-Object.entries(emailNamePairs as Record<string, string>).forEach(([email, name]) => {
-  emailToName.set(email.toLowerCase(), name);
-});
 
 /* ─────── Helper – format time ─────── */
 const formatTime = (time: string): string => {
@@ -83,7 +74,9 @@ export default function Dashboard() {
   const router = useRouter();
 
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [fullName, setFullName] = useState<string>("User");
   const [loading, setLoading] = useState(true);
+  const [loadingUser, setLoadingUser] = useState(true);
 
   /* ---------- Auth Guard ---------- */
   useEffect(() => {
@@ -91,7 +84,43 @@ export default function Dashboard() {
     if (!auth.loading && !auth.user) router.replace("/");
   }, [auth, router]);
 
-  /* ---------- Fetch (with manual refresh) ---------- */
+  /* ---------- Fetch user name from Supabase ---------- */
+  useEffect(() => {
+    if (!auth?.user?.email) return;
+
+    const currentEmail = auth.user.email.toLowerCase().trim();
+
+    const fetchUserName = async () => {
+      setLoadingUser(true);
+      try {
+        const { data, error } = await supabase
+          .from("memberinformation")
+          .select("name")
+          .eq("email", currentEmail)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error fetching name:", error);
+        }
+
+        const nameFromDb = data?.name?.trim();
+        setFullName(
+          nameFromDb && nameFromDb.length > 0
+            ? nameFromDb
+            : currentEmail.split("@")[0] || "User"
+        );
+      } catch (err) {
+        console.error("User fetch failed:", err);
+        setFullName(currentEmail.split("@")[0] || "User");
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    fetchUserName();
+  }, [auth?.user?.email]);
+
+  /* ---------- Fetch sessions (with manual refresh) ---------- */
   const fetchSessions = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -112,34 +141,27 @@ export default function Dashboard() {
   useEffect(() => {
     if (!auth?.user) return;
     fetchSessions();
-    const id = setInterval(fetchSessions, 30_000);
+    const id = setInterval(fetchSessions, 30000);
     return () => clearInterval(id);
   }, [auth?.user, fetchSessions]);
 
   const signOut = async () => {
     try {
       await auth?.signOut?.();
+      await supabase.auth.signOut();
       router.replace("/");
     } catch (e) {
       console.error(e);
     }
   };
 
-  /* ---------- Get Full Name from Email ---------- */
-  const getUserDisplayName = () => {
-    const userEmail = auth.user?.email?.toLowerCase();
-    if (userEmail && emailToName.has(userEmail)) {
-      return emailToName.get(userEmail)!;
-    }
-    return auth.user?.email?.split("@")[0] || "User";
-  };
-
-  if (!auth || auth.loading)
+  if (!auth || auth.loading || loadingUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <p className="text-lg text-blue-600">Loading…</p>
       </div>
     );
+  }
   if (!auth.user) return null;
 
   return (
@@ -187,10 +209,10 @@ export default function Dashboard() {
             <Link href="/modelpaper" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
             </Link>
-<Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+            <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
             </Link>
-            <Link href="/certifictes" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+            <Link href="/certificates" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <FileCheck className="w-5 h-5 mr-3" /> Certificates
             </Link>
           </nav>
@@ -211,29 +233,28 @@ export default function Dashboard() {
             <span className="mt-1">Sessions</span>
           </Link>
           <Link href="/previous" className="flex flex-col items-center text-xs text-gray-600">
-            <ClipboardList className="w-6 h-6" />
-            <span className="mt-1">Previous sessions</span>
+            <History className="w-6 h-6" />
+            <span className="mt-1">Previous</span>
           </Link>
-          <Link
-              href="/vlogs"
-              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-blue-600 transition"
-            >
-              <ClipboardList className="w-5 h-5" /> B/Vlogs
-            </Link>
-            <Link
-              href="/schedule"
-              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-blue-600 transition"
-            >
-              <GraduationCap className="w-5 h-5" /> Exam Information
-            </Link>
-            <Link href="/modelpaper" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
-            </Link>
-                     <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
-            </Link>
-            <Link href="/certificates" className="flex flex-col items-center text-xs">
-            <FileCheck className="w-5 h-5 mb-1" />Certificates
+          <Link href="/vlogs" className="flex flex-col items-center text-xs text-gray-600">
+            <ClipboardList className="w-6 h-6" />
+            <span className="mt-1">B/Vlogs</span>
+          </Link>
+          <Link href="/schedule" className="flex flex-col items-center text-xs text-gray-600">
+            <GraduationCap className="w-6 h-6" />
+            <span className="mt-1">Exam</span>
+          </Link>
+          <Link href="/modelpaper" className="flex flex-col items-center text-xs text-gray-600">
+            <ClipboardPenLine className="w-6 h-6" />
+            <span className="mt-1">Papers</span>
+          </Link>
+          <Link href="/tests" className="flex flex-col items-center text-xs text-gray-600">
+            <ClipboardPenLine className="w-6 h-6" />
+            <span className="mt-1">Tests</span>
+          </Link>
+          <Link href="/certificates" className="flex flex-col items-center text-xs text-gray-600">
+            <FileCheck className="w-6 h-6" />
+            <span className="mt-1">Certs</span>
           </Link>
           <button onClick={signOut} className="flex flex-col items-center text-xs text-red-600">
             <LogOut className="w-6 h-6" />
@@ -250,30 +271,19 @@ export default function Dashboard() {
                 <Image src={logo} alt="Logo" className="h-12 w-12" />
                 
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-800">Session</h1>
+                  <h1 className="text-2xl font-bold text-gray-800">Sessions</h1>
                   <p className="text-sm text-gray-500">
                     All upcoming and past sessions
                   </p>
                 </div>
               </div>
-              {/* Beautiful MEPSC Assessment Announcement */}
-              <div className="relative group">
-               
 
-                {/* Tooltip */}
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300 z-10">
-                  <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-4 whitespace-nowrap shadow-2xl">
-                    Click to view Exam Schedule
-                  </div>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-8 border-transparent border-b-gray-900"></div>
-                </div>
-              </div>
               {/* Desktop User Info + Sign Out */}
               <div className="hidden md:flex items-center gap-4">
                 <div className="flex items-center gap-2 text-sm">
                   <User2 className="w-5 h-5 text-blue-600" />
                   <span className="font-medium text-gray-800">
-                    {getUserDisplayName()}
+                    {fullName}
                   </span>
                 </div>
                 <button
@@ -329,9 +339,7 @@ export default function Dashboard() {
 
                   // Get trainer name
                   const trainerEmail = session.name_of_the_trainer?.toLowerCase();
-                  const trainerName = trainerEmail && emailToName.has(trainerEmail)
-                    ? capitalizeTrainerName(emailToName.get(trainerEmail)!)
-                    : trainerEmail
+                  const trainerName = trainerEmail
                     ? capitalizeTrainerName(trainerEmail.split("@")[0])
                     : "Not Assigned";
 
@@ -385,9 +393,8 @@ export default function Dashboard() {
 
                           <div className="flex items-center gap-2">
                             <Lock className="w-4 h-4 text-blue-600" />
-                            <span>password:ICTPI</span>
+                            <span>password: ICTPI</span>
                           </div>
-
                         </div>
                       </div>
 

@@ -1,4 +1,5 @@
 "use client";
+
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
@@ -7,10 +8,9 @@ import Image from "next/image";
 import {
   LayoutDashboard, History, ClipboardList, GraduationCap,
   ClipboardPenLine, User2, LogOut, Eye, X, Radio, Circle, AlertTriangle,
-  GraduationCapIcon,FileCheck
+  FileCheck,
 } from "lucide-react";
 import logo from "../../assets/ICTPL_image.png";
-import emailNamePairs from "../../public/names.json";
 import { createClient } from "@supabase/supabase-js";
 import { format } from "date-fns";
 
@@ -19,18 +19,24 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const emailToName = new Map<string, string>();
-Object.entries(emailNamePairs as Record<string, string>).forEach(
-  ([email, name]) => emailToName.set(email.toLowerCase(), name)
-);
+interface Session {
+  sessionid: number;
+  sessiontitle: string;
+  sessiondate: string;
+  sessiontime: string;
+  sessionlink: string;
+}
 
-interface Session { sessionid: number; sessiontitle: string; sessiondate: string; sessiontime: string; sessionlink: string; }
-interface HtmlTest { title: string; src: string; }
+interface HtmlTest {
+  title: string;
+  src: string;
+}
 
 export default function MockTestsPage() {
   const auth = useAuth() as any;
   const router = useRouter();
   const pathname = usePathname();
+
   const [mounted, setMounted] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedHtmlTest, setSelectedHtmlTest] = useState<HtmlTest | null>(null);
@@ -40,6 +46,10 @@ export default function MockTestsPage() {
   const [liveNow, setLiveNow] = useState(false);
   const [nearestFutureSession, setNearestFutureSession] = useState<Session | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+
+  // User name from Supabase
+  const [fullName, setFullName] = useState<string>("User");
+  const [loadingUser, setLoadingUser] = useState(true);
 
   const fullscreenRef = useRef<HTMLDivElement>(null);
 
@@ -113,26 +123,72 @@ export default function MockTestsPage() {
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    const fetchSessions = async () => {
-      const { data } = await supabase.from("sessions").select("*");
-      if (data) {
-        const sorted = (data as Session[]).sort((a, b) =>
-          new Date(`${a.sessiondate}T${a.sessiontime}`).getTime() -
-          new Date(`${b.sessiondate}T${b.sessiontime}`).getTime()
+    if (!auth?.user?.email) return;
+
+    const currentEmail = auth.user.email.toLowerCase().trim();
+
+    const fetchUserAndSessions = async () => {
+      setLoadingUser(true);
+
+      try {
+        // Fetch user name
+        const { data: member, error: memberError } = await supabase
+          .from("memberinformation")
+          .select("name")
+          .eq("email", currentEmail)
+          .maybeSingle();
+
+        if (memberError) {
+          console.error("Error fetching name:", memberError);
+        }
+
+        const nameFromDb = member?.name?.trim();
+        setFullName(
+          nameFromDb && nameFromDb.length > 0
+            ? nameFromDb
+            : currentEmail.split("@")[0] || "User"
         );
-        setSessions(sorted);
-        setLiveNow(sorted.some(isSessionLiveNow));
-        const nowInIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
-        const future = sorted.find(s => new Date(`${s.sessiondate}T${s.sessiontime}`) > nowInIST);
-        setNearestFutureSession(future ?? null);
+
+        // Fetch sessions
+        const { data } = await supabase.from("sessions").select("*");
+        if (data) {
+          const sorted = (data as Session[]).sort((a, b) =>
+            new Date(`${a.sessiondate}T${a.sessiontime}`).getTime() -
+            new Date(`${b.sessiondate}T${b.sessiontime}`).getTime()
+          );
+          setSessions(sorted);
+          setLiveNow(sorted.some(isSessionLiveNow));
+          const nowInIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+          const future = sorted.find(s => new Date(`${s.sessiondate}T${s.sessiontime}`) > nowInIST);
+          setNearestFutureSession(future ?? null);
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setLoadingUser(false);
       }
     };
-    if (auth?.user) {
-      fetchSessions();
-      const id = setInterval(fetchSessions, 30_000);
-      return () => clearInterval(id);
-    }
-  }, [auth?.user]);
+
+    fetchUserAndSessions();
+
+    const interval = setInterval(() => {
+      supabase.from("sessions").select("*").then(({ data }) => {
+        if (data) {
+          const sorted = (data as Session[]).sort((a, b) =>
+            new Date(`${a.sessiondate}T${a.sessiontime}`).getTime() -
+            new Date(`${b.sessiondate}T${b.sessiontime}`).getTime()
+          );
+          setSessions(sorted);
+          setLiveNow(sorted.some(isSessionLiveNow));
+          const nowInIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+          const future = sorted.find(s => new Date(`${s.sessiondate}T${s.sessiontime}`) > nowInIST);
+          setNearestFutureSession(future ?? null);
+        }
+      });
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [auth?.user?.email]);
 
   useEffect(() => {
     if (!auth || auth.loading || !mounted) return;
@@ -144,16 +200,9 @@ export default function MockTestsPage() {
     router.push("/");
   };
 
-  const getUserDisplayName = () => {
-    const email = auth.user?.email?.toLowerCase();
-    return email && emailToName.has(email)
-      ? emailToName.get(email)!
-      : auth.user?.email?.split("@")[0] || "User";
-  };
-
   const badgeSession = liveNow ? sessions.find(isSessionLiveNow) ?? null : nearestFutureSession;
 
-  if (!mounted || !auth || auth.loading) {
+  if (!mounted || !auth || auth.loading || loadingUser) {
     return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
   }
   if (!auth.user) return null;
@@ -168,7 +217,7 @@ export default function MockTestsPage() {
       `}</style>
 
       <div className="min-h-screen flex flex-col md:flex-row bg-gray-100">
-        {/* Same Sidebar & Mobile Nav */}
+        {/* Sidebar */}
         <aside className="hidden md:flex w-60 bg-[#0062cc] text-white flex-col h-screen sticky top-0 overflow-y-auto">
           <nav className="flex-1 px-4 py-4 space-y-1">
             <Link href="/dashboard" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/dashboard" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
@@ -192,27 +241,25 @@ export default function MockTestsPage() {
             <Link href="/modelpaper" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/modelpaper" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
             </Link>
- <Link href="/tests" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/modelpaper" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
+            <Link href="/tests" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/tests" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
             </Link>
-            <Link href="/certifictes" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+            <Link href="/certifictes" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === "/certificates" ? "bg-blue-700 font-semibold" : "hover:bg-blue-500"}`}>
               <FileCheck className="w-5 h-5 mr-3" /> Certificates
             </Link>
-
           </nav>
         </aside>
 
+        {/* Mobile Nav */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0062cc]/95 backdrop-blur-sm text-white flex justify-around items-center py-2 shadow-lg z-50 text-xs">
           <Link href="/dashboard" className="flex flex-col items-center"><LayoutDashboard className="w-5 h-5 mb-1" /> Dash</Link>
           <Link href="/results" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> Results</Link>
           <Link href="/sessions" className="flex flex-col items-center"><ClipboardList className="w-5 h-5 mb-1" /> Sessions</Link>
           <Link href="/previous" className="flex flex-col items-center"><History className="w-5 h-5 mb-1" /> Prev</Link>
           <Link href="/modelpaper" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Papers</Link>
-          <Link href="/schedule" className="flex flex-col items-center"><GraduationCapIcon className="w-5 h-5 mb-1" /> Exam Information</Link>
-          <Link href="/tests" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Practice Tests</Link>
-          <Link href="/certificates" className="flex flex-col items-center text-xs">
-            <FileCheck className="w-5 h-5 mb-1" />Certificates
-          </Link>
+          <Link href="/schedule" className="flex flex-col items-center"><GraduationCap className="w-5 h-5 mb-1" /> Exam</Link>
+          <Link href="/tests" className="flex flex-col items-center"><ClipboardPenLine className="w-5 h-5 mb-1" /> Tests</Link>
+          <Link href="/certificates" className="flex flex-col items-center"><FileCheck className="w-5 h-5 mb-1" /> Certs</Link>
           <button onClick={handleSignOut} className="flex flex-col items-center"><LogOut className="w-5 h-5 mb-1" /> Out</button>
         </nav>
 
@@ -241,7 +288,7 @@ export default function MockTestsPage() {
               <div className="flex items-center gap-2">
                 <User2 className="w-5 h-5 text-gray-700" />
                 <div className="text-sm text-gray-800 text-right">
-                  <div className="font-semibold truncate max-w-[150px] md:max-w-none">{getUserDisplayName()}</div>
+                  <div className="font-semibold truncate max-w-[150px] md:max-w-none">{fullName}</div>
                 </div>
               </div>
               <button onClick={handleSignOut} className="hidden md:flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition">

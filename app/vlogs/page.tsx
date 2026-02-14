@@ -23,7 +23,7 @@ import {
   Upload,
 } from "lucide-react";
 import logo from "../../assets/ICTPL_image.png";
-import emailNamePairs from "../../public/names.json";
+import { supabase } from "@/lib/Supabase"; // assuming this is your supabase client
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface PdfItem {
@@ -31,18 +31,6 @@ interface PdfItem {
   src: string | null;        // null = not uploaded yet
   download?: string;         // optional filename for download
 }
-
-interface AuthState {
-  user: { email?: string; [key: string]: any } | null;
-  loading: boolean;
-  signOut?: () => Promise<void>;
-}
-
-// ── Name mapping ──────────────────────────────────────────────────────────────
-const emailToName = new Map<string, string>();
-Object.entries(emailNamePairs as Record<string, string>).forEach(([email, name]) => {
-  emailToName.set(email.toLowerCase(), name);
-});
 
 // ── Materials Data ────────────────────────────────────────────────────────────
 const ictpiMaterials: PdfItem[] = [
@@ -69,67 +57,25 @@ const ictpiMaterials: PdfItem[] = [
 ];
 
 const sreedharaMaterials: PdfItem[] = [
-  // {
-  //   title: "Advanced GST Litigation & Appeals",
-  //   src: "/pdf/Advanced_GST_Litigation_Sreedhara_Parthasarathy.pdf",
-  //   download: "Advanced GST Litigation & Appeals - CTPr Sreedhara Parthasarathy.pdf",
-  // },
-  // {
-  //   title: "Tax Planning for High Net Worth Individuals",
-  //   src: "/pdf/Tax_Planning_HNWI_Sreedhara.pdf",
-  //   download: "Tax Planning for HNIs - CTPr Sreedhara Parthasarathy.pdf",
-  // },
-  // {
-  //   title: "Ethics in Tax Practice (Upcoming)",
-  //   src: null,
-  // },
-  // {
-  //   title: "International Taxation Masterclass",
-  //   src: null,
-  // },
+  // Add your items here when ready
 ];
 
 const subramanianMaterials: PdfItem[] = [
-  // {
-  //   title: "Companies Act Compliance Handbook",
-  //   src: "/pdf/Companies_Act_Compliance_Subramanian.pdf",
-  //   download: "Companies Act Compliance - BR.N. Subramanian.pdf",
-  // },
-  // {
-  //   title: "FEMA & RBI Compliance for Practitioners",
-  //   src: null,
-  // },
-  // {
-  //   title: "Corporate Restructuring & Tax Implications",
-  //   src: null,
-  // },
+  // Add your items here when ready
 ];
 
 const baskaranMaterials: PdfItem[] = [
-  // {
-  //   title: "Income Tax Assessment & Scrutiny Mastery",
-  //   src: "/pdf/Income_Tax_Assessment_Baskaran.pdf",
-  //   download: "Income Tax Assessment Mastery - CTPr Kalyanasundaram Baskaran.pdf",
-  // },
-  // {
-  //   title: "TDS Compliance & Case Studies",
-  //   src: "/pdf/TDS_Compliance_Baskaran.pdf",
-  //   download: "TDS Compliance - CTPr Kalyanasundaram Baskaran.pdf",
-  // },
-  // {
-  //   title: "Black Money Act & Benami Transactions",
-  //   src: null,
-  // },
+  // Add your items here when ready
 ];
 
-export default function ModelPaperPage() {
-  const auth = useAuth() as AuthState;
+export default function StudyMaterialsPage() {
+  const auth = useAuth() as any;
   const router = useRouter();
   const pathname = usePathname();
 
-  const { loading, user, signOut } = auth;
-
   const [selectedPdf, setSelectedPdf] = useState<string | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [fullName, setFullName] = useState<string>("Student");
 
   // Accordion states
   const [expandedICTPI, setExpandedICTPI] = useState(true);
@@ -137,27 +83,56 @@ export default function ModelPaperPage() {
   const [expandedSubramanian, setExpandedSubramanian] = useState(false);
   const [expandedBaskaran, setExpandedBaskaran] = useState(false);
 
+  // ── Fetch user name from Supabase ───────────────────────────────────────────
+  useEffect(() => {
+    if (!auth?.user?.email) return;
+
+    const currentEmail = auth.user.email.toLowerCase().trim();
+
+    const fetchUserName = async () => {
+      setLoadingUser(true);
+      try {
+        const { data, error } = await supabase
+          .from("memberinformation")
+          .select("name")
+          .eq("email", currentEmail)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error fetching name:", error);
+        }
+
+        const nameFromDb = data?.name?.trim();
+        setFullName(
+          nameFromDb && nameFromDb.length > 0
+            ? nameFromDb
+            : currentEmail.split("@")[0] || "Student"
+        );
+      } catch (err) {
+        console.error("User fetch failed:", err);
+        setFullName(currentEmail.split("@")[0] || "Student");
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    fetchUserName();
+  }, [auth?.user?.email]);
+
   // ── Auth protection ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (loading) return;
-    if (!user) {
+    if (auth?.loading) return;
+    if (!auth?.user) {
       router.replace("/");
     }
-  }, [loading, user, router]);
+  }, [auth?.loading, auth?.user, router]);
 
   const handleSignOut = async () => {
-    if (signOut) await signOut();
+    if (auth?.signOut) await auth.signOut();
     router.replace("/");
   };
 
-  const getUserName = () => {
-    const email = user?.email?.toLowerCase() ?? "";
-    return email && emailToName.has(email)
-      ? emailToName.get(email)!
-      : email.split("@")[0] || "Student";
-  };
-
-  if (loading) {
+  if (auth?.loading || loadingUser) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <p className="text-xl text-gray-600 animate-pulse">Loading...</p>
@@ -165,13 +140,13 @@ export default function ModelPaperPage() {
     );
   }
 
-  if (!user) return null;
+  if (!auth?.user) return null;
 
   const selectedTitle =
     [...ictpiMaterials, ...sreedharaMaterials, ...subramanianMaterials, ...baskaranMaterials]
       .find((item) => item.src === selectedPdf)?.title ?? "Document";
 
-  // ── Reusable Material Card Component ───────────────────────────────────────
+  // ── Reusable Material Card ─────────────────────────────────────────────────
   const MaterialCard = ({ item }: { item: PdfItem }) => {
     const isAvailable = item.src !== null;
 
@@ -287,7 +262,7 @@ export default function ModelPaperPage() {
           <Image src={logo} alt="Logo" className="h-14 w-14 md:h-16 md:w-16 object-contain" priority />
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="font-semibold text-gray-800">{getUserName()}</p>
+              <p className="font-semibold text-gray-800">{fullName}</p>
             </div>
             <User2 className="w-9 h-9 text-gray-600" />
             <button
@@ -345,6 +320,7 @@ export default function ModelPaperPage() {
               { href: "/previous", icon: History, label: "Prev" },
               { href: "/modelpaper", icon: ClipboardPenLine, label: "Papers" },
               { href: "/tests", icon: ClipboardPenLine, label: "Tests" },
+              { href: "/certificates", icon: FileCheck, label: "Certs" },
             ].map((item) => (
               <Link key={item.href} href={item.href} className="flex flex-col items-center py-1 px-2 min-w-[60px]">
                 <item.icon className="w-6 h-6 mb-0.5" />

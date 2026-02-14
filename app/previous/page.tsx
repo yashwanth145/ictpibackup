@@ -1,8 +1,8 @@
 "use client";
-import logo from "../../assets/ICTPL_image.png";
+
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -13,9 +13,16 @@ import {
   PlayCircle,
   GraduationCap,
   ClipboardPenLine,
-  FileCheck
+  FileCheck,
 } from "lucide-react";
 import Image from "next/image";
+import logo from "../../assets/ICTPL_image.png";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 const PREVIOUS_SESSIONS = [
   {
@@ -104,51 +111,71 @@ const PREVIOUS_SESSIONS = [
   },
 ];
 
-// Load email to name mapping from public/names.json
-const emailToName = new Map<string, string>();
-fetch("/names.json")
-  .then((res) => {
-    if (!res.ok) throw new Error("Failed to fetch names.json");
-    return res.json();
-  })
-  .then((data) => {
-    Object.entries(data).forEach(([email, name]) => {
-      emailToName.set(email.toString().toLowerCase().trim(), name as string);
-    });
-  })
-  .catch((error) => {
-    console.warn("Failed to load names.json:", error);
-  });
-
 export default function PreviousSessions() {
   const auth = useAuth() as any;
   const router = useRouter();
 
+  const [fullName, setFullName] = useState<string>("User");
+  const [loadingUser, setLoadingUser] = useState(true);
+
   useEffect(() => {
-    if (!auth) return;
-    if (!auth.loading && !auth.user) router.push("/");
+    if (!auth?.user) return;
+
+    const userEmail = auth.user.email?.toLowerCase()?.trim() || "";
+
+    const fetchUserName = async () => {
+      setLoadingUser(true);
+      try {
+        const { data, error } = await supabase
+          .from("memberinformation")
+          .select("name")
+          .eq("email", userEmail)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error fetching user name:", error);
+        }
+
+        if (data?.name?.trim()) {
+          setFullName(data.name.trim());
+        } else {
+          setFullName(userEmail.split("@")[0] || "User");
+        }
+      } catch (err) {
+        console.error("User fetch failed:", err);
+        setFullName(userEmail.split("@")[0] || "User");
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    fetchUserName();
+  }, [auth?.user]);
+
+  useEffect(() => {
+    if (!auth?.loading && !auth?.user) {
+      router.push("/");
+    }
   }, [auth, router]);
 
-  if (!auth || auth.loading) {
+  if (!auth || auth.loading || loadingUser) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <p className="text-lg text-gray-600">Loading...</p>
       </div>
     );
   }
+
   if (!auth.user) return null;
 
   const handleSignOut = async () => {
-    await auth.signOut?.();
-    router.push("/");
-  };
-
-  const getUserDisplayName = () => {
-    const userEmail = auth.user?.email?.toString().toLowerCase().trim();
-    if (userEmail && emailToName.has(userEmail)) {
-      return emailToName.get(userEmail);
+    try {
+      await auth.signOut?.();
+      await supabase.auth.signOut();
+      router.push("/");
+    } catch (err) {
+      console.error("Sign out failed:", err);
     }
-    return "User";
   };
 
   const extractYouTubeId = (url: string) => {
@@ -160,62 +187,44 @@ export default function PreviousSessions() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* ---------- DESKTOP SIDEBAR (FIXED) ---------- */}
+      {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-60 bg-[#0062cc] text-white flex-col sticky top-0 h-screen overflow-y-auto">
         <nav className="flex-1 mt-4 space-y-3">
-          <Link
-            href="/dashboard"
-            className="flex items-center px-5 py-2 hover:bg-blue-500 transition"
-          >
+          <Link href="/dashboard" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
             <LayoutDashboard className="w-5 h-5 mr-3" /> Dashboard
           </Link>
-          <Link
-            href="/results"
-            className="flex items-center px-5 py-2 hover:bg-blue-500 transition"
-          >
+          <Link href="/results" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
             <ClipboardList className="w-5 h-5 mr-3" /> Result
           </Link>
-          <Link
-            href="/sessions"
-            className="flex items-center px-5 py-2 hover:bg-blue-500 transition"
-          >
+          <Link href="/sessions" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
             <ClipboardList className="w-5 h-5 mr-3" /> Sessions
           </Link>
-          <Link
-            href="/previous"
-            className="flex items-center px-5 py-2 hover:bg-blue-500 transition"
-          >
+          <Link href="/previous" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
             <History className="w-5 h-5 mr-3" /> Previous Sessions
           </Link>
-          <Link
-            href="/vlogs"
-            className="flex items-center px-5 py-2 hover:bg-blue-500 transition"
-          >
+          <Link href="/vlogs" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
             <ClipboardList className="w-5 h-5 mr-3" /> B/Vlogs
           </Link>
-          <Link
-            href="/schedule"
-            className="flex items-center px-5 py-2 hover:bg-blue-500 transition"
-          >
+          <Link href="/schedule" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
             <GraduationCap className="w-5 h-5 mr-3" /> Exam Information
           </Link>
           <Link href="/modelpaper" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
-            </Link>
-<Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
-            </Link>
-            <Link href="/certifictes" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <FileCheck className="w-5 h-5 mr-3" /> Certificates
-            </Link>
+            <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
+          </Link>
+          <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+            <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
+          </Link>
+          <Link href="/certificates" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+            <FileCheck className="w-5 h-5 mr-3" /> Certificates
+          </Link>
         </nav>
       </aside>
 
-      {/* ---------- MOBILE BOTTOM NAV ---------- */}
+      {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-50">
         <div className="flex justify-around items-center py-2">
           <Link href="/dashboard" className="flex flex-col items-center text-xs text-gray-700">
-            <LayoutDashboard className="w-6 h-6 mb-1" /> Dashboard
+            <LayoutDashboard className="w-6 h-6 mb-1" /> Dash
           </Link>
           <Link href="/results" className="flex flex-col items-center text-xs text-gray-700">
             <ClipboardList className="w-6 h-6 mb-1" /> Results
@@ -230,16 +239,16 @@ export default function PreviousSessions() {
             <ClipboardList className="w-6 h-6 mb-1" /> B/Vlogs
           </Link>
           <Link href="/schedule" className="flex flex-col items-center text-xs text-gray-700">
-            <GraduationCap className="w-6 h-6 mb-1" /> Exam Information
+            <GraduationCap className="w-6 h-6 mb-1" /> Exam
           </Link>
-          <Link href="/modelpaper" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Model papers
-            </Link>
-<Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
-              <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
-            </Link>
-            <Link href="/certificates" className="flex flex-col items-center text-xs">
-            <FileCheck className="w-5 h-5 mb-1" />Certificates
+          <Link href="/modelpaper" className="flex flex-col items-center text-xs text-gray-700">
+            <ClipboardPenLine className="w-6 h-6 mb-1" /> Papers
+          </Link>
+          <Link href="/tests" className="flex flex-col items-center text-xs text-gray-700">
+            <ClipboardPenLine className="w-6 h-6 mb-1" /> Tests
+          </Link>
+          <Link href="/certificates" className="flex flex-col items-center text-xs text-gray-700">
+            <FileCheck className="w-6 h-6 mb-1" /> Certs
           </Link>
           <button onClick={handleSignOut} className="flex flex-col items-center text-xs text-red-600">
             <LogOut className="w-6 h-6 mb-1" /> Logout
@@ -247,27 +256,24 @@ export default function PreviousSessions() {
         </div>
       </nav>
 
-      {/* ---------- MAIN CONTENT ---------- */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Fixed Header */}
         <header className="fixed top-0 left-0 md:left-60 right-0 bg-white shadow-md z-40 flex items-center justify-between px-5 py-4">
-          <div className="relative w-20 h-20 md:w-28 md:h-28">
-             <Image src={logo} alt="Logo" className="h-[60px] w-[60px] md:h-[100px] md:w-[100px]" />
+          <div className="relative">
+            <Image src={logo} alt="Logo" className="h-16 w-16 md:h-24 md:w-24" />
           </div>
 
-
-            
-
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 bg-gray-50 px-3 py-2 rounded-lg">
+            <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-lg">
               <User2 className="w-5 h-5 text-gray-600" />
               <span className="font-semibold text-gray-800 text-sm md:text-base">
-                {getUserDisplayName()}
+                {fullName}
               </span>
             </div>
             <button
               onClick={handleSignOut}
-              className="hidden md:flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition shadow-sm"
+              className="hidden md:flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition shadow-sm"
             >
               <LogOut className="w-5 h-5" /> Sign Out
             </button>
@@ -275,7 +281,7 @@ export default function PreviousSessions() {
         </header>
 
         {/* Scrollable Main Area */}
-<main className="flex-1 pt-32 md:pt-38 pb-24 md:pb-12 px-5 md:px-8 bg-gradient-to-br from-gray-50 to-gray-100 overflow-y-auto">
+        <main className="flex-1 pt-28 md:pt-36 pb-24 md:pb-12 px-5 md:px-8 bg-gradient-to-br from-gray-50 to-gray-100 overflow-y-auto">
           <div className="max-w-7xl mx-auto">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-8 mt-4">
               Previous Sessions
@@ -298,15 +304,15 @@ export default function PreviousSessions() {
                         isYoutube &&
                         window.open(`https://www.youtube.com/watch?v=${youtubeId}`, "_blank")
                       }
-                      className="group bg-white rounded-xl border border-gray-200 hover:border-crimson-600 transition-all cursor-pointer shadow-md hover:shadow-xl overflow-hidden transform hover:-translate-y-1 duration-200"
+                      className="group bg-white rounded-xl border border-gray-200 hover:border-[#0062cc] transition-all cursor-pointer shadow-md hover:shadow-xl overflow-hidden transform hover:-translate-y-1 duration-200"
                     >
                       <div
                         className="relative h-48 w-full flex items-center justify-center overflow-hidden"
                         style={{
-                          background: `linear-gradient(135deg, #dc143c 0%, #b22222 70%, #8b0000 100%)`,
+                          background: `linear-gradient(135deg, #0062cc 0%, #004080 70%, #002b5c 100%)`,
                         }}
                       >
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-40"></div>
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-40"></div>
 
                         {isYoutube ? (
                           <PlayCircle className="w-16 h-16 text-white drop-shadow-2xl group-hover:scale-110 transition-transform duration-300" />
@@ -323,7 +329,7 @@ export default function PreviousSessions() {
                           <p className="font-medium">
                             {session.sessiondate.replace(/-/g, " / ")}
                           </p>
-                          <p className="text-gray-500">{session.sessiontime}</p>
+                          <p className="text-gray-500">{session.sessiontime} IST</p>
                         </div>
                       </div>
                     </div>
@@ -333,7 +339,7 @@ export default function PreviousSessions() {
             )}
           </div>
 
-          {/* Extra bottom padding for mobile */}
+          {/* Extra bottom padding for mobile nav */}
           <div className="h-20 md:hidden"></div>
         </main>
       </div>
