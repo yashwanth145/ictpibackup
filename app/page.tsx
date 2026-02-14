@@ -1,148 +1,177 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { auth } from "@/lib/firebaseConfig";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+} from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import logo from "../assets/ICTPL_image.png";
-import "../app/globals.css";
-
+import logo from "../assets/ICTPL_image.png"; // adjust path if needed
 import { supabase } from "@/lib/Supabase";
 
-interface MemberMap {
-  [userId: string]: string; // membership_id → email
-}
-
 export default function LoginPage() {
-  const [userId, setUserId] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [error, setError] = useState<string>("");
-  const [memberMap, setMemberMap] = useState<MemberMap>({});
-  const [loading, setLoading] = useState<boolean>(true);
+  const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false); // unified for login + reset
 
-  const [showResetModal, setShowResetModal] = useState<boolean>(false);
-  const [resetMessage, setResetMessage] = useState<string>("");
-  const [resetError, setResetError] = useState<string>("");
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
+  const [resetError, setResetError] = useState("");
 
   const router = useRouter();
 
-  useEffect(() => {
-    async function fetchMembers() {
-      try {
-        const { data, error } = await supabase
-          .from("memberinformation")
-          .select("membership_id, email");
-
-        if (error) throw error;
-
-        const map: MemberMap = {};
-        data?.forEach((row: any) => {
-          const mid = String(row.membership_id || "").trim().toUpperCase();
-          const email = String(row.email || "").trim();
-
-          if (mid && email) {
-            map[mid] = email;
-          }
-        });
-
-        setMemberMap(map);
-      } catch (err) {
-        console.error("Error fetching members:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchMembers();
-  }, []);
-
-  async function handleLogin() {
-    setError("");
-
-    if (loading) {
-      setError("Still loading member information...");
-      return;
-    }
-
-    const normalizedUserId = userId.trim().toUpperCase();
-    const email = memberMap[normalizedUserId];
-
-    if (!email) {
-      setError("Invalid User ID. Please use ICTPI provided credentials.");
-      return;
-    }
+  // Helper: Lookup single member's email by membership ID
+  const lookupEmailByMemberId = async (membershipId: string): Promise<string | null> => {
+    const normalized = membershipId.trim().toUpperCase();
+    if (!normalized) return null;
 
     try {
+      const { data, error } = await supabase
+        .from("memberinformation")
+        .select("email")
+        .eq("membership_id", normalized)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Supabase lookup error:", error);
+        return null;
+      }
+
+      if (!data?.email) return null;
+
+      const email = String(data.email).trim().toLowerCase();
+      return email.includes("@") ? email : null;
+    } catch (err) {
+      console.error("Lookup failed:", err);
+      return null;
+    }
+  };
+
+  const handleLogin = async () => {
+    setError("");
+    if (isProcessing) return;
+
+    const trimmedId = userId.trim();
+    if (!trimmedId) {
+      setError("Please enter your Member ID");
+      return;
+    }
+    if (!password) {
+      setError("Please enter your password");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const email = await lookupEmailByMemberId(trimmedId);
+      if (!email) {
+        setError("Invalid Member ID – please use your ICTPI provided ID");
+        return;
+      }
+
       await signInWithEmailAndPassword(auth, email, password);
+
       setUserId("");
       setPassword("");
       router.push("/dashboard");
-    } catch {
-      setError("Incorrect password or invalid credentials or Check your network connections.");
+      router.refresh();
+    } catch (err: any) {
+      const code = err.code;
+      if (code === "auth/wrong-password") {
+        setError("Incorrect password");
+      } else if (code === "auth/user-not-found" || code === "auth/invalid-credential") {
+        setError("Invalid credentials");
+      } else if (code === "auth/too-many-requests") {
+        setError("Too many attempts. Please try again later.");
+      } else {
+        setError("Login failed. Please check your connection and try again.");
+        console.error("Login error:", err);
+      }
+    } finally {
+      setIsProcessing(false);
     }
-  }
+  };
 
-  async function handleForgotPassword() {
+  const handleForgotPassword = async () => {
     setResetError("");
     setResetMessage("");
 
-    if (!userId) {
-      setResetError("Please enter your Member ID.");
+    const trimmedId = userId.trim();
+    if (!trimmedId) {
+      setResetError("Please enter your Member ID first");
       return;
     }
 
-    const normalizedUserId = userId.trim().toUpperCase();
-    const email = memberMap[normalizedUserId];
-
-    if (!email) {
-      setResetError("Invalid Member ID. No associated email found.");
-      return;
-    }
+    setIsProcessing(true);
 
     try {
+      const email = await lookupEmailByMemberId(trimmedId);
+      if (!email) {
+        setResetError("No registered email found for this Member ID");
+        return;
+      }
+
       await sendPasswordResetEmail(auth, email, {
-        url: "https://ictpiwebsite.vercel.app/reset-password",
-        handleCodeInApp: true,
+        url: `${window.location.origin}/reset-password`,
       });
 
-      setResetMessage("Password reset email has been sent to your registered email address.");
-      setTimeout(() => setShowResetModal(false), 3000);
+      setResetMessage("Password reset link sent to your registered email. Check spam/junk folder.");
+      setTimeout(() => {
+        setShowResetModal(false);
+        setResetMessage("");
+        setResetError("");
+      }, 5000);
     } catch (err: any) {
-      setResetError(err.message || "Failed to send reset email.");
+      console.error("Reset error:", err);
+      let message = err.message || "Failed to send reset email. Try again.";
+
+      if (err.code === "auth/too-many-requests") {
+        message = "Too many requests. Please wait a few minutes.";
+      } else if (err.code === "auth/invalid-email") {
+        message = "Invalid email format.";
+      }
+
+      setResetError(message);
+    } finally {
+      setIsProcessing(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-white">
-      <div className="bg-white p-8 rounded-2xl shadow-2xl w-96 transform transition-all duration-300 hover:scale-105 max-w-md">
-
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 px-4">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md transform transition-all duration-300 hover:shadow-2xl">
         <div className="flex justify-center mb-6">
-          <Image src={logo} alt="Logo" className="h-16 w-auto" />
+          <Image
+            src={logo}
+            alt="ICTPI Logo"
+            className="h-70 w-auto object-contain"
+            priority
+          />
         </div>
 
-        <h1 className="text-3xl font-bold mb-6 text-center text-blue-800">Welcome</h1>
+        
+        <p className="text-center text-gray-600 mb-8 text-sm">
+          Sign in with your ICTPI Member ID
+        </p>
 
         {error && (
-          <p className="text-red-500 text-sm mb-4 text-center bg-red-50 p-2 rounded">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
             {error}
-          </p>
+          </div>
         )}
 
-        {loading && (
-          <p className="text-blue-600 text-center text-sm mb-4">
-            Loading member data...
-          </p>
-        )}
-
-        <div className="space-y-4">
+        <div className="space-y-5">
           <input
             type="text"
             placeholder="Member ID"
             value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            className="w-full p-3 border border-blue-200 rounded-lg bg-blue-50 text-black"
-            disabled={loading}
+            onChange={(e) => setUserId(e.target.value.toUpperCase())}
+            disabled={isProcessing}
+            className="w-full px-4 py-3 border border-blue-200 rounded-lg bg-blue-50/60 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 disabled:opacity-60 uppercase tracking-wide"
           />
 
           <input
@@ -150,23 +179,24 @@ export default function LoginPage() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 border border-blue-200 rounded-lg bg-blue-50 text-black"
-            disabled={loading}
+            disabled={isProcessing}
+            className="w-full px-4 py-3 border border-blue-200 rounded-lg bg-blue-50/60 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 disabled:opacity-60"
           />
 
           <button
             onClick={handleLogin}
-            disabled={loading}
-            className="w-full bg-blue-600 text-white p-3 rounded-lg disabled:opacity-50"
+            disabled={isProcessing || !userId.trim() || !password.trim()}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign In
+            {isProcessing ? "Processing..." : "Sign In"}
           </button>
 
           <div className="text-center">
             <button
+              type="button"
               onClick={() => setShowResetModal(true)}
-              className="text-red-600 hover:underline text-sm"
-              disabled={loading}
+              disabled={isProcessing}
+              className="text-red-600 hover:text-red-800 text-sm font-medium underline-offset-2 hover:underline disabled:opacity-50"
             >
               Forgot Password?
             </button>
@@ -174,35 +204,58 @@ export default function LoginPage() {
         </div>
       </div>
 
+      {/* Forgot Password Modal */}
       {showResetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-2xl w-96">
-
-            <h2 className="text-2xl font-bold mb-4 text-center text-blue-800">
-              Forgot Password
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl p-7 w-full max-w-md shadow-2xl">
+            <h2 className="text-2xl font-bold text-blue-800 mb-5 text-center">
+              Reset Password
             </h2>
+
+            <p className="text-gray-600 text-sm mb-5 text-center">
+              Enter your Member ID to receive a reset link
+            </p>
 
             <input
               type="text"
               placeholder="Member ID"
               value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              className="w-full p-3 mb-4 border rounded bg-blue-50 text-black"
+              onChange={(e) => setUserId(e.target.value.toUpperCase())}
+              disabled={isProcessing}
+              className="w-full px-4 py-3 border border-blue-200 rounded-lg bg-blue-50/60 focus:outline-none focus:ring-2 focus:ring-blue-400 mb-5 uppercase tracking-wide"
             />
 
-            {resetError && <p className="text-red-500 text-sm mb-3">{resetError}</p>}
-            {resetMessage && <p className="text-green-600 text-sm mb-3">{resetMessage}</p>}
+            {resetError && (
+              <p className="text-red-600 text-sm mb-4 text-center">{resetError}</p>
+            )}
+            {resetMessage && (
+              <p className="text-green-600 text-sm mb-4 text-center font-medium">
+                {resetMessage}
+              </p>
+            )}
 
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setShowResetModal(false)} className="text-black">Cancel</button>
+            <div className="flex justify-end gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetModal(false);
+                  setResetError("");
+                  setResetMessage("");
+                }}
+                disabled={isProcessing}
+                className="px-5 py-2.5 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              >
+                Cancel
+              </button>
+
               <button
                 onClick={handleForgotPassword}
-                className="bg-blue-600 text-white px-5 py-2 rounded"
+                disabled={isProcessing || !userId.trim()}
+                className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
               >
-                Send Reset Email
+                {isProcessing ? "Sending..." : "Send Reset Link"}
               </button>
             </div>
-
           </div>
         </div>
       )}
