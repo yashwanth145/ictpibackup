@@ -7,7 +7,6 @@ import Link from "next/link";
 import {
   LayoutDashboard,
   ClipboardList,
-  User2,
   LogOut,
   ArrowLeft,
   Award,
@@ -569,12 +568,11 @@ export default function ProfilePage() {
                         ) : "—"}
                       </p>
                     </div>
-                    <div><p className="text-sm text-gray-600">NCVET</p><p className="font-medium text-lg">{profile.ncvet || "—"}</p></div>
-                    <div><p className="text-sm text-gray-600">GSTP</p><p className="font-medium text-lg">{profile.gstp || "—"}</p></div>
-                    <div><p className="text-sm text-gray-600">ITP</p><p className="font-medium text-lg">{profile.itp || "—"}</p></div>
-                    <div><p className="text-sm text-gray-600">SIDH</p><p className="font-medium text-lg">{profile.sidh || "—"}</p></div>
-                    <div><p className="text-sm text-gray-600">STP</p><p className="font-medium text-lg">{profile.stp || "—"}</p></div>
-                    <div><p className="text-sm text-gray-600">CB</p><p className="font-medium text-lg">{profile.cb || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">NCVET CERTIFICATE NO.</p><p className="font-medium text-lg">{profile.ncvet || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">GSTP ENROLLMENT NO.</p><p className="font-medium text-lg">{profile.gstp || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">ITP ENROLLMENT NO.</p><p className="font-medium text-lg">{profile.itp || "—"}</p></div>
+                    <div><p className="text-sm text-gray-600">SIDH CANDIDATE ID</p><p className="font-medium text-lg">{profile.sidh || "—"}</p></div>
+                    
                   </div>
                 </section>
               </>
@@ -686,11 +684,10 @@ export default function ProfilePage() {
                   <h4 className="text-lg font-semibold mb-4 text-gray-800">Certificates & Licenses</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {[
-                      { label: "NCVET", key: "ncvet" },
                       { label: "GSTP Enrollment No.", key: "gstp" },
                       { label: "ITP Enrollment No", key: "itp" },
-                      { label: "SIDH Certificate No", key: "sidh" },
-                      { label: "STP / VAT Enrollment No", key: "stp" },
+                      { label: "SIDH Candidate No", key: "sidh" },
+                      { label: "STP Enrollment No ", key: "stp" },
                       { label: "CB Licence No", key: "cb" },
                     ].map(({ label, key }) => (
                       <div key={key}>
