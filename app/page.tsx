@@ -1,264 +1,237 @@
-"use client";
+// app/page.tsx
+import Image from 'next/image';
+import Link from 'next/link';
 
-import { useState } from "react";
-import { auth } from "@/lib/firebaseConfig";
-import {
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-} from "firebase/auth";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import logo from "../assets/ICTPL_image.png"; // adjust path if needed
-import { supabase } from "@/lib/Supabase";
-
-export default function LoginPage() {
-  const [userId, setUserId] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false); // unified for login + reset
-
-  const [showResetModal, setShowResetModal] = useState(false);
-  const [resetMessage, setResetMessage] = useState("");
-  const [resetError, setResetError] = useState("");
-
-  const router = useRouter();
-
-  // Helper: Lookup single member's email by membership ID
-  const lookupEmailByMemberId = async (membershipId: string): Promise<string | null> => {
-    const normalized = membershipId.trim().toUpperCase();
-    if (!normalized) return null;
-
-    try {
-      const { data, error } = await supabase
-        .from("memberinformation")
-        .select("email")
-        .eq("membership_id", normalized)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Supabase lookup error:", error);
-        return null;
-      }
-
-      if (!data?.email) return null;
-
-      const email = String(data.email).trim().toLowerCase();
-      return email.includes("@") ? email : null;
-    } catch (err) {
-      console.error("Lookup failed:", err);
-      return null;
-    }
-  };
-
-  const handleLogin = async () => {
-    setError("");
-    if (isProcessing) return;
-
-    const trimmedId = userId.trim();
-    if (!trimmedId) {
-      setError("Please enter your Member ID");
-      return;
-    }
-    if (!password) {
-      setError("Please enter your password");
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const email = await lookupEmailByMemberId(trimmedId);
-      if (!email) {
-        setError("Invalid Member ID – please use your ICTPI provided ID");
-        return;
-      }
-
-      await signInWithEmailAndPassword(auth, email, password);
-
-      setUserId("");
-      setPassword("");
-      router.push("/dashboard");
-      router.refresh();
-    } catch (err: any) {
-      const code = err.code;
-      if (code === "auth/wrong-password") {
-        setError("Incorrect password");
-      } else if (code === "auth/user-not-found" || code === "auth/invalid-credential") {
-        setError("Invalid credentials");
-      } else if (code === "auth/too-many-requests") {
-        setError("Too many attempts. Please try again later.");
-      } else {
-        setError("Login failed. Please check your connection and try again.");
-        console.error("Login error:", err);
-      }
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    setResetError("");
-    setResetMessage("");
-
-    const trimmedId = userId.trim();
-    if (!trimmedId) {
-      setResetError("Please enter your Member ID first");
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const email = await lookupEmailByMemberId(trimmedId);
-      if (!email) {
-        setResetError("No registered email found for this Member ID");
-        return;
-      }
-
-      await sendPasswordResetEmail(auth, email, {
-        url: `${window.location.origin}/reset-password`,
-      });
-
-      setResetMessage("Password reset link sent to your registered email. Check spam/junk folder.");
-      setTimeout(() => {
-        setShowResetModal(false);
-        setResetMessage("");
-        setResetError("");
-      }, 5000);
-    } catch (err: any) {
-      console.error("Reset error:", err);
-      let message = err.message || "Failed to send reset email. Try again.";
-
-      if (err.code === "auth/too-many-requests") {
-        message = "Too many requests. Please wait a few minutes.";
-      } else if (err.code === "auth/invalid-email") {
-        message = "Invalid email format.";
-      }
-
-      setResetError(message);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+export default function Home() {
+  const navItems = [
+    { label: 'Home', href: '/' },
+    { label: 'Member Login', href: '/login' },
+    { label: 'Admin Login', href: 'https://results-zwf6.vercel.app/' },
+    { label: 'Refer', href: '/refer' },
+  ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 px-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md transform transition-all duration-300 hover:shadow-2xl">
-        <div className="flex justify-center mb-6">
-          <Image
-            src={logo}
-            alt="ICTPI Logo"
-            className="h-70 w-auto object-contain"
-            priority
-          />
-        </div>
-
-        
-        <p className="text-center text-gray-600 mb-8 text-sm">
-          Sign in with your ICTPI Member ID
-        </p>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
-            {error}
-          </div>
-        )}
-
-        <div className="space-y-5">
-          <input
-            type="text"
-            placeholder="Member ID"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value.toUpperCase())}
-            disabled={isProcessing}
-            className="w-full px-4 py-3 border border-blue-200 rounded-lg bg-blue-50/60 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 disabled:opacity-60 uppercase tracking-wide"
-          />
-
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={isProcessing}
-            className="w-full px-4 py-3 border border-blue-200 rounded-lg bg-blue-50/60 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-800 disabled:opacity-60"
-          />
-
-          <button
-            onClick={handleLogin}
-            disabled={isProcessing || !userId.trim() || !password.trim()}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isProcessing ? "Processing..." : "Sign In"}
-          </button>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setShowResetModal(true)}
-              disabled={isProcessing}
-              className="text-red-600 hover:text-red-800 text-sm font-medium underline-offset-2 hover:underline disabled:opacity-50"
-            >
-              Forgot Password?
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Forgot Password Modal */}
-      {showResetModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl p-7 w-full max-w-md shadow-2xl">
-            <h2 className="text-2xl font-bold text-blue-800 mb-5 text-center">
-              Reset Password
-            </h2>
-
-            <p className="text-gray-600 text-sm mb-5 text-center">
-              Enter your Member ID to receive a reset link
-            </p>
-
-            <input
-              type="text"
-              placeholder="Member ID"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value.toUpperCase())}
-              disabled={isProcessing}
-              className="w-full px-4 py-3 border border-blue-200 rounded-lg bg-blue-50/60 focus:outline-none focus:ring-2 focus:ring-blue-400 mb-5 uppercase tracking-wide"
+    <div className="min-h-screen bg-gray-50 font-sans antialiased">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-indigo-950 to-blue-950 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10">
+          <div className="shrink-0">
+            <Image
+              src="/images/ICTPL_image.jpg"
+              alt="ICTPI Logo"
+              width={120}
+              height={132}
+              className="object-contain drop-shadow-lg"
+              priority
             />
+          </div>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold italic tracking-tight text-center md:text-left leading-tight">
+            Institute of Chartered<br className="sm:hidden" /> Tax Practitioners India
+          </h1>
+        </div>
+      </header>
 
-            {resetError && (
-              <p className="text-red-600 text-sm mb-4 text-center">{resetError}</p>
-            )}
-            {resetMessage && (
-              <p className="text-green-600 text-sm mb-4 text-center font-medium">
-                {resetMessage}
+      {/* Navigation */}
+      <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-wrap justify-center md:justify-start gap-3 sm:gap-4 lg:gap-6">
+            {navItems.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="px-5 py-2.5 bg-amber-400 hover:bg-amber-500 active:bg-amber-600 text-gray-900 font-semibold text-sm sm:text-base rounded-lg shadow transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2"
+                aria-label={`Go to ${item.label} page`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 space-y-16 lg:space-y-20">
+        {/* INSTITUTE NEWS */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold text-indigo-950 text-center mb-8 tracking-tight">
+            Institute News
+          </h2>
+          <div className="bg-white rounded-2xl shadow-xl border border-amber-200/60 overflow-hidden">
+            <div className="p-6 md:p-10 space-y-5 text-gray-800 text-lg leading-relaxed">
+              <p className="flex items-start gap-3">
+                <span className="shrink-0 w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center">1</span>
+                ICTPI RPL Batch convocation will happen shortly
               </p>
-            )}
-
-            <div className="flex justify-end gap-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowResetModal(false);
-                  setResetError("");
-                  setResetMessage("");
-                }}
-                disabled={isProcessing}
-                className="px-5 py-2.5 text-gray-700 hover:bg-gray-100 rounded-lg transition"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={handleForgotPassword}
-                disabled={isProcessing || !userId.trim()}
-                className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
-              >
-                {isProcessing ? "Sending..." : "Send Reset Link"}
-              </button>
+              <p className="flex items-start gap-3">
+                <span className="shrink-0 w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center">2</span>
+                <a
+                  href="https://www.ictpi.in/ctpr"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-700 hover:text-indigo-900 underline decoration-amber-400 decoration-2 hover:decoration-amber-600 transition"
+                >
+                  Chartered Tax Practitioner course registrations are open
+                </a>
+              </p>
+              <p className="flex items-start gap-3">
+                <span className="shrink-0 w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center">3</span>
+                CTPRI Course study materials & exam portal is being updated and new academic materials will be released soon! Currently EBooks are available and are being distributed
+              </p>
+              <p className="flex items-start gap-3">
+                <span className="shrink-0 w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center">4</span>
+                Consultant (Chartered Tax Practitioners) Course is fully NSQF Aligned at Level 5
+              </p>
             </div>
           </div>
+        </section>
+
+        {/* Vision + Mission + Description + Acknowledgement + Appeal */}
+        <section className="bg-gradient-to-br from-indigo-900 to-blue-950 text-white rounded-3xl shadow-2xl overflow-hidden">
+          <div className="px-6 py-12 md:px-12 md:py-16 lg:py-20 space-y-12 lg:space-y-16 text-center">
+            <div>
+              <h3 className="text-2xl md:text-3xl font-bold underline underline-offset-8 decoration-amber-400 mb-4">Our Vision</h3>
+              <p className="text-xl md:text-2xl font-semibold max-w-4xl mx-auto">
+                Serving stakeholders is deemed service to government
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-2xl md:text-3xl font-bold underline underline-offset-8 decoration-amber-400 mb-4">Our Mission</h3>
+              <p className="text-xl md:text-2xl font-semibold max-w-4xl mx-auto">
+                To uplift anyone & everyone, assure their skills of functioning
+              </p>
+            </div>
+
+            <div className="text-base md:text-lg leading-relaxed max-w-5xl mx-auto opacity-95 space-y-6">
+              <p>
+                The diversified class of Enrolled Tax Practitioners... [your full paragraph here – kept short for example]
+              </p>
+              <p>
+                ICTPI is an exclusive platform to incubate the domain of Enrolled Tax Practitioners of India... [rest of text]
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-10 pt-8 border-t border-white/20">
+              {/* Acknowledgement */}
+              <div className="space-y-6">
+                <h4 className="text-xl font-bold underline underline-offset-4 decoration-amber-300">Acknowledgement</h4>
+                <p className="text-sm md:text-base opacity-90">
+                  Institute of Chartered Tax Practitioners India has outlined specific requirements for membership eligibility...
+                </p>
+                <ol className="list-decimal list-inside space-y-3 text-left text-sm md:text-base">
+                  <li>Complete the NCVET approved Skill Qualification...</li>
+                  <li>Obtain a qualification certificate from MEPSC...</li>
+                  <li>Secure an enrollment licence to practice...</li>
+                </ol>
+              </div>
+
+              {/* Disclaimer */}
+              <div className="space-y-6">
+                <h4 className="text-xl font-bold underline underline-offset-4 decoration-amber-300">Disclaimer</h4>
+                <ul className="list-disc list-inside space-y-3 text-left text-sm md:text-base opacity-90">
+                  <li>ICTPI is not affiliated in any manner with ICAI...</li>
+                  <li>ICTPI does not issue licenses to practice...</li>
+                  <li>The courses offered by ICTPI are not an essential prerequisite...</li>
+                  <li>The scope of ICTPI courses is to provide vocational training...</li>
+                </ul>
+              </div>
+
+              {/* Appeal */}
+              <div className="space-y-6">
+                <h4 className="text-xl font-bold underline underline-offset-4 decoration-amber-300">Appeal</h4>
+                <p className="text-sm md:text-base leading-relaxed opacity-90">
+                  The Institute has set up a 2000 sq.ft. head office named "TPI Bhavan" at Bengaluru...
+                  <br /><br />
+                  <span className="font-semibold">(Donations to the Institute are eligible for deductions u/s 80 G(5) of IT Act 1961)</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Gallery */}
+        <section>
+          <h2 className="text-3xl md:text-4xl font-bold text-indigo-950 text-center mb-10 tracking-tight">
+            Institute&apos;s Gallery
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 md:gap-6">
+            {['im1.png', 'im2.png', 'im3.png', 'im4.png', 'im5.png'].map((img, i) => (
+              <div
+                key={i}
+                className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300"
+              >
+                <Image
+                  src={`/images/${img}`}
+                  alt={`Institute event or activity ${i + 1}`}
+                  width={400}
+                  height={400}
+                  className="w-full aspect-square object-cover transform group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                  <p className="text-white text-sm font-medium">Event / Activity {i + 1}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Banner */}
+        <section className="text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-indigo-950 mb-10 tracking-tight">
+            Banners and Editorials
+          </h2>
+          <div className="max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-2xl">
+            <Image
+              src="/images/editorial.png"
+              alt="Editorial Banner from ICTPI"
+              width={1200}
+              height={600}
+              className="w-full h-auto"
+              priority
+            />
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-gradient-to-b from-gray-900 to-gray-950 text-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 text-center space-y-6 text-sm md:text-base">
+          <a
+            href="https://ictpi.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-lg md:text-xl font-semibold text-amber-300 hover:text-amber-200 underline underline-offset-4 transition"
+          >
+            Visit our official website: https://ictpi.in/
+          </a>
+
+          <p className="text-xl md:text-2xl font-bold text-white">
+            INSTITUTE OF CHARTERED TAX PRACTITIONERS INDIA
+          </p>
+          <p className="opacity-80">(Registered Professional Body of Enrolled Tax Practitioners of the Nation)</p>
+
+          <div className="pt-4 space-y-2">
+            <p className="font-medium">Registered Address:</p>
+            <p>TPI Bhavan 313, 9th Main, 26th Cross,</p>
+            <p>Banashankari Stage II, Bangalore - 560070</p>
+            <p>Karnataka-IN</p>
+          </div>
+
+          <div className="pt-6 flex flex-col sm:flex-row justify-center gap-6 md:gap-10">
+            <a href="mailto:info@ictpi.in" className="hover:text-amber-300 transition">Email: info@ictpi.in</a>
+            <a href="tel:7019063788" className="hover:text-amber-300 transition">Tel: 7019063788</a>
+          </div>
+
+          <div className="pt-8 flex flex-wrap justify-center gap-5 md:gap-8 text-sm">
+            <a href="https://www.ictpi.in/_files/ugd/d635cc_0b0d617b3e954e2eace126725fc08616.pdf" target="_blank" rel="noopener noreferrer" className="hover:text-amber-300 transition underline">Disclaimer</a>
+            <a href="https://www.ictpi.in/_files/ugd/d635cc_74bf07f910a6472aba6d3e849040c479.pdf" target="_blank" rel="noopener noreferrer" className="hover:text-amber-300 transition underline">Privacy policy</a>
+            <a href="https://www.ictpi.in/_files/ugd/d635cc_c3e1dd367c96477cb51efc6e4a93816f.pdf" target="_blank" rel="noopener noreferrer" className="hover:text-amber-300 transition underline">Refund policy</a>
+            <a href="https://www.ictpi.in/_files/ugd/d635cc_2672c689be5645599d2e44a39efa7075.pdf" target="_blank" rel="noopener noreferrer" className="hover:text-amber-300 transition underline">Terms and conditions</a>
+          </div>
+
+          <p className="pt-10 opacity-70 text-sm">© {new Date().getFullYear()} by ICTPI</p>
         </div>
-      )}
+      </footer>
     </div>
   );
 }
