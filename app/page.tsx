@@ -6,7 +6,7 @@ export default function Home() {
   const navItems = [
     { label: 'Home', href: '/' },
     { label: 'Member Login', href: '/login' },
-    { label: 'Admin Login', href: 'https://results-zwf6.vercel.app/' },
+    { label: 'Admin Login', href: 'https://results-a9z5.vercel.app/' },
     { label: 'Refer', href: '/refer' },
   ];
 
