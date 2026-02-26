@@ -686,7 +686,6 @@ export default function ProfilePage() {
                     {[
                       { label: "GSTP Enrollment No.", key: "gstp" },
                       { label: "ITP Enrollment No", key: "itp" },
-                      { label: "SIDH Candidate No", key: "sidh" },
                       { label: "STP Enrollment No ", key: "stp" },
                       { label: "CB Licence No", key: "cb" },
                     ].map(({ label, key }) => (
@@ -731,7 +730,6 @@ export default function ProfilePage() {
                         ncvet: profileForm.ncvet.trim() || null,
                         gstp: profileForm.gstp.trim() || null,
                         itp: profileForm.itp.trim() || null,
-                        sidh: profileForm.sidh.trim() || null,
                         stp: profileForm.stp.trim() || null,
                         cb: profileForm.cb.trim() || null,
                       };
