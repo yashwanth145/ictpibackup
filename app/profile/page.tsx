@@ -598,8 +598,8 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              <p className="text-sm text-red-600 mb-6 leading-relaxed">
-                <strong>Important:</strong> These fields can be filled <strong>only once</strong>.<br />
+              <p className="text-xl text-red-600 mb-6 leading-relaxed">
+                <strong>Important:</strong> These fields can be filled <strong><i>only once</i></strong>.<br />
                 Please enter accurate information — especially IDs and certificate numbers.
               </p>
 
