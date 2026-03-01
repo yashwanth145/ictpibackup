@@ -10,6 +10,34 @@ export default function Home() {
     { label: 'Refer', href: '/refer' },
   ];
 
+  const recognitionLinks = [
+    {
+      label: 'National Qualification Register',
+      href: 'https://www.nqr.gov.in/qualifications/3521',
+      icon: '🏆',
+    },
+    {
+      label: 'Occupational Standard',
+      href: 'https://www.mepsc.in/occupational_standar/entrepreneurship/',
+      icon: '📋',
+    },
+    {
+      label: 'RPL for Seniors',
+      href: 'https://www.ictpi.in/rpl',
+      icon: '🔄',
+    },
+    {
+      label: 'ICTPI UDIN',
+      href: 'https://ictpi.verifyudin.in/',
+      icon: '✅',
+    },
+    {
+      label: 'Register of Members',
+      href: 'https://www.ictpi.in/register-of-members',
+      icon: '📜',
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans antialiased">
       {/* Header */}
@@ -31,7 +59,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Navigation */}
+      {/* Primary Navigation */}
       <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-wrap justify-center md:justify-start gap-3 sm:gap-4 lg:gap-6">
@@ -48,6 +76,32 @@ export default function Home() {
           </div>
         </div>
       </nav>
+
+      {/* Recognition Bar */}
+      <div className="bg-gradient-to-r from-indigo-950 via-indigo-900 to-black text-white border-b border-amber-500/30 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <h3 className="text-center text-xl md:text-2xl font-bold mb-4 tracking-wide text-amber-300">
+            RECOGNITION
+          </h3>
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+            {recognitionLinks.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-3 px-6 py-3 bg-white/10 backdrop-blur-sm rounded-xl border border-amber-400/30 hover:border-amber-400 hover:bg-white/20 transition-all duration-300 hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-indigo-950"
+                aria-label={`Visit ${item.label}`}
+              >
+                <span className="text-2xl">{item.icon}</span>
+                <span className="font-medium text-sm sm:text-base text-amber-100 group-hover:text-amber-300 transition-colors">
+                  {item.label}
+                </span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 space-y-16 lg:space-y-20">
@@ -86,7 +140,7 @@ export default function Home() {
         </section>
 
         {/* Vision + Mission + Description + Acknowledgement + Appeal */}
-        <section className="bg-gradient-to-br bg-black text-white rounded-3xl shadow-2xl overflow-hidden">
+        <section className="bg-gradient-to-br from-black to-gray-900 text-white rounded-3xl shadow-2xl overflow-hidden">
           <div className="px-6 py-12 md:px-12 md:py-16 lg:py-20 space-y-12 lg:space-y-16 text-center">
             <div>
               <h3 className="text-2xl md:text-3xl font-bold underline underline-offset-8 decoration-amber-400 mb-4">Our Vision</h3>
@@ -104,9 +158,8 @@ export default function Home() {
 
             <div className="text-base md:text-lg leading-relaxed max-w-5xl mx-auto opacity-95 space-y-6">
               <p>
-The diversified class of Enrolled Tax Practitioners, persevered everywhere as the fundamental & foundation stones of every business activity, exist from the ancient streams of Indian Taxation system. They are proposed and recognised as the non-litigant propagators of supportive compliance under the respective statutes. The Institute of Chartered Tax Practitioners India (ICTPI) is formed to unite & transform these unorganised and scattered Tax Practitioners, into a premier troupe of “Chartered Tax Practitioners.” ICTPI aims to confer a uniform qualification & membership to protect their interest as a fraternity and to become value added professionals in nation building. ICTPI has developed a qualification, which will be awarded by the Management & Entrepreneurship and Professionals Skill Council (MEPSC) duly approved by the National Council for Vocational Education and Training (NCVET) under the aegis of Ministry of Skill Development and Entrepreneurship (MSDE), Government of India.
+                The diversified class of Enrolled Tax Practitioners, persevered everywhere as the fundamental & foundation stones of every business activity, exist from the ancient streams of Indian Taxation system. They are proposed and recognised as the non-litigant propagators of supportive compliance under the respective statutes. The Institute of Chartered Tax Practitioners India (ICTPI) is formed to unite & transform these unorganised and scattered Tax Practitioners, into a premier troupe of “Chartered Tax Practitioners.” ICTPI aims to confer a uniform qualification & membership to protect their interest as a fraternity and to become value added professionals in nation building. ICTPI has developed a qualification, which will be awarded by the Management & Entrepreneurship and Professionals Skill Council (MEPSC) duly approved by the National Council for Vocational Education and Training (NCVET) under the aegis of Ministry of Skill Development and Entrepreneurship (MSDE), Government of India.
               </p>
-              
             </div>
 
             <div className="grid md:grid-cols-3 gap-10 pt-8 border-t border-white/20">
@@ -122,7 +175,7 @@ The diversified class of Enrolled Tax Practitioners, persevered everywhere as th
                   <li>Secure an enrollment licence to practice...</li>
                 </ol>
                 <p className="text-sm md:text-base opacity-90">
-By acknowledging these requirements, ICTPI ensures its members possess the necessary expertise and credentials to provide tax compliance services.
+                  By acknowledging these requirements, ICTPI ensures its members possess the necessary expertise and credentials to provide tax compliance services.
                 </p>
               </div>
 
@@ -141,7 +194,8 @@ By acknowledging these requirements, ICTPI ensures its members possess the neces
               <div className="space-y-6">
                 <h4 className="text-xl font-bold underline underline-offset-4 decoration-amber-300">Appeal</h4>
                 <p className="text-sm md:text-base leading-relaxed opacity-90">
-                  The Institute has set up a 2000 sq.ft.  head office named "TPI BHAVAN" at Bengaluru. Apart from operative costs, rent ,salaries & office expenses, institute need corpus to fund its capital expenditure such as building, repairs, furniture - fixtures, equipment/'s, which requires additional support. To achieve above objectives the institute requires resources in terms of men and money. The Institute requests one and all to contribute generously for its endeavour and support for the cause of fraternity! (Donations to the Institute are eligible for deductions u/s 80 G(5) of IT Act 1961)</p>
+                  The Institute has set up a 2000 sq.ft. head office named "TPI BHAVAN" at Bengaluru. Apart from operative costs, rent, salaries & office expenses, institute need corpus to fund its capital expenditure such as building, repairs, furniture - fixtures, equipment/'s, which requires additional support. To achieve above objectives the institute requires resources in terms of men and money. The Institute requests one and all to contribute generously for its endeavour and support for the cause of fraternity! (Donations to the Institute are eligible for deductions u/s 80 G(5) of IT Act 1961)
+                </p>
               </div>
             </div>
           </div>
