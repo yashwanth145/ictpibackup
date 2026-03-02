@@ -265,7 +265,7 @@ export default function Dashboard() {
             <Link href="/tests" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
             </Link>
-            <Link href="/certificats" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
+            <Link href="/certificates" className="flex items-center px-5 py-2 hover:bg-blue-500 transition">
               <FileCheck className="w-5 h-5 mr-3" /> Certificates
             </Link>
           </nav>
