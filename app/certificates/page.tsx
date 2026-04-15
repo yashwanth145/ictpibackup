@@ -19,6 +19,7 @@ import {
 import Image from "next/image";
 
 import { supabase } from "@/lib/Supabase";
+import { logoSrc } from "@/lib/logo";
 
 export default function Certificates() {
   const auth = useAuth() as any;
@@ -121,7 +122,7 @@ export default function Certificates() {
       status: "Active Member",
       accent: "from-blue-50 to-blue-200",
       note: "Available soon – contact support if urgent",
-      image: "/images/ICTPL_image.jpg",
+      image: logoSrc,
     },
   ];
 
@@ -142,7 +143,7 @@ export default function Certificates() {
         <aside className="hidden md:sticky md:top-0 md:flex md:flex-col md:w-64 md:h-screen md:bg-[#0062cc] md:text-white md:overflow-y-auto scrollbar-hide">
           <div className="p-6 border-b border-blue-600">
             <Image
-              src="/images/ICTPL_image.jpg" // ← changed to public path (or keep your alias if working)
+              src={logoSrc}
               alt="ICTPL Logo"
               width={140}
               height={56}
@@ -222,7 +223,7 @@ export default function Certificates() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 max-w-7xl mx-auto">
               <div className="flex items-center gap-4">
                 <Image
-                  src="/images/ICTPL_image.jpg" // ← using public path
+                  src={logoSrc}
                   alt="ICTPL Logo"
                   className="h-14 w-auto sm:h-16"
                   width={160}

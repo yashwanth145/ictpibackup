@@ -8,8 +8,8 @@ import {
 } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import logo from "@/assets/ICTPL_image.jpg";
 import { supabase } from "@/lib/Supabase";
+import { logoSrc as logo } from "@/lib/logo";
 
 export default function LoginPage() {
   const [userId, setUserId] = useState("");

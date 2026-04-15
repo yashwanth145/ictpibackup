@@ -24,7 +24,7 @@ import Image from "next/image";
 import { createClient } from "@supabase/supabase-js";
 
 /* ─────── Assets ─────── */
-import logo from "../../assets/ICTPL_image.jpg";
+import { logoSrc as logo } from "@/lib/logo";
 
 /* ─────── Types ─────── */
 interface Session {
