@@ -1,4 +1,5 @@
 // app/page.tsx
+"use client";
 import Image, { type StaticImageData } from 'next/image';
 import Link from 'next/link';
 import udpinImage from '../assets/udpin.jpeg';
