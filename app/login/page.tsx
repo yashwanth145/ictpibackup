@@ -148,6 +148,8 @@ export default function LoginPage() {
           <Image
             src={logo}
             alt="ICTPI Logo"
+            width={220}
+            height={220}
             className="h-70 w-auto object-contain"
             priority
           />

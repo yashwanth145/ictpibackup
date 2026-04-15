@@ -259,7 +259,7 @@ export default function StudyMaterialsPage() {
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <header className="bg-white shadow-sm sticky top-0 z-40 px-5 py-3 flex items-center justify-between">
-          <Image src={logo} alt="Logo" className="h-14 w-14 md:h-16 md:w-16 object-contain" priority />
+          <Image src={logo} alt="Logo" width={64} height={64} className="h-14 w-14 md:h-16 md:w-16 object-contain" priority />
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="font-semibold text-gray-800">{fullName}</p>

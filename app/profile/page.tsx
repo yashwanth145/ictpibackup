@@ -323,7 +323,7 @@ export default function ProfilePage() {
             <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
               <ArrowLeft className="w-6 h-6 text-gray-800" />
             </button>
-            <Image src={logo} alt="Logo" className="h-16 w-16 md:h-20 md:w-20" />
+            <Image src={logo} alt="Logo" width={80} height={80} className="h-16 w-16 md:h-20 md:w-20" />
             <h1 className="text-xl md:text-2xl font-bold text-gray-800">Profile</h1>
           </div>
 

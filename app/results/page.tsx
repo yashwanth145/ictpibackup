@@ -247,7 +247,7 @@ const ResultPage = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-y-auto pb-20 md:pb-0">
         <header className="flex justify-between items-center bg-white shadow px-4 md:px-6 py-3 sticky top-0 z-40">
-          <Image src={logo} alt="Logo" className="h-[60px] w-[60px] md:h-[100px] md:w-[100px]" />
+          <Image src={logo} alt="Logo" width={100} height={100} className="h-[60px] w-[60px] md:h-[100px] md:w-[100px]" />
           <div className="flex items-center gap-3 md:gap-5">
             <div className="flex items-center gap-2">
               <User2 className="w-5 h-5 text-gray-700" />

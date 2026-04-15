@@ -309,7 +309,7 @@ export default function Dashboard() {
         <div className="flex-1 flex flex-col">
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white shadow px-4 md:px-6 py-4 sticky top-0 z-40 gap-4">
             <div className="flex items-center gap-4">
-              <Image src={logo} alt="Logo" className="h-16 w-16 md:h-24 md:w-24" />
+              <Image src={logo} alt="Logo" width={100} height={100} className="h-16 w-16 md:h-24 md:w-24" />
             </div>
 
             <div className="flex items-center gap-5 md:gap-8">

@@ -3,7 +3,7 @@
 import Image, { type StaticImageData } from 'next/image';
 import Link from 'next/link';
 import udpinImage from '../assets/udpin.jpeg';
-import { logoSrc } from '@/lib/logo';
+import instituteLogo from '../assets/ICTPL_image.ico';
 
 type RecognitionLink = {
   label: string;
@@ -57,7 +57,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10">
           <div className="shrink-0">
             <Image
-              src={logoSrc}
+              src={instituteLogo}
               alt="ICTPI Logo"
               width={120}
               height={132}
