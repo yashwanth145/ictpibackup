@@ -24,18 +24,6 @@ import Image from "next/image";
 import logo from "../../assets/ICTPL_image.png";
 import { supabase } from "@/lib/Supabase";
 
-// Import member mapping and names mapping
-import memberMapData from "@/public/member.json"; // membershipId -> email
-import namesMapData from "@/public/names.json";     // email -> name
-
-interface MemberMap {
-  [membershipId: string]: string; // membershipId -> email
-}
-
-interface NamesMap {
-  [email: string]: string; // email -> full name
-}
-
 interface Candidate {
   membership_id: number;
   name: string;
@@ -65,9 +53,7 @@ export default function MyExamSchedulePage() {
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [memberMap] = useState<MemberMap>(memberMapData);
-  const [namesMap] = useState<NamesMap>(namesMapData);
+  const [userDisplayName, setUserDisplayName] = useState<string>("User");
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -78,7 +64,7 @@ export default function MyExamSchedulePage() {
 
   // Fetch logged-in user's own exam schedule
   useEffect(() => {
-    if (!auth?.user?.email || Object.keys(memberMap).length === 0) return;
+    if (!auth?.user?.email) return;
 
     async function fetchMySchedule() {
       setLoading(true);
@@ -86,20 +72,30 @@ export default function MyExamSchedulePage() {
 
       const userEmail = auth.user?.email?.toLowerCase().trim();
 
-      // Find membership ID from email
-      const membershipIdStr = Object.keys(memberMap).find(
-        (id) => memberMap[id].toLowerCase().trim() === userEmail
-      );
-
-      if (!membershipIdStr) {
-        setError("No membership record found for your account.");
-        setLoading(false);
-        return;
-      }
-
-      const membershipId = Number(membershipIdStr);
-
       try {
+        const { data: memberData, error: memberError } = await supabase
+          .from("memberinformation")
+          .select("membership_id, name")
+          .eq("email", userEmail)
+          .maybeSingle();
+
+        if (memberError) {
+          console.error("Supabase member fetch error:", memberError);
+          setError("Failed to load your member profile. Please try again later.");
+          return;
+        }
+
+        if (!memberData?.membership_id) {
+          setError("No membership record found for your account.");
+          return;
+        }
+
+        if (memberData.name?.trim()) {
+          setUserDisplayName(memberData.name.trim());
+        } else {
+          setUserDisplayName(userEmail?.split("@")[0] || "User");
+        }
+
         const { data, error: supabaseError } = await supabase
           .from("candidate_exam_schedule")
           .select(`
@@ -119,7 +115,7 @@ export default function MyExamSchedulePage() {
             fellowship_link,
             new_member_link
           `)
-          .eq("membership_id", membershipId)
+          .eq("membership_id", Number(memberData.membership_id))
           .maybeSingle();
 
         if (supabaseError) {
@@ -139,7 +135,7 @@ export default function MyExamSchedulePage() {
     }
 
     fetchMySchedule();
-  }, [auth?.user?.email, memberMap]);
+  }, [auth?.user?.email]);
 
   const handleSignOut = async () => {
     try {
@@ -152,11 +148,7 @@ export default function MyExamSchedulePage() {
   };
 
   const getUserDisplayName = () => {
-    const userEmail = auth?.user?.email?.toLowerCase().trim();
-    if (userEmail && namesMap[userEmail]) {
-      return namesMap[userEmail];
-    }
-    return auth?.user?.email?.split("@")[0] || "User";
+    return userDisplayName || auth?.user?.email?.split("@")[0] || "User";
   };
 
   const isNewMemberPending = candidate?.new_member_link ? true : false;

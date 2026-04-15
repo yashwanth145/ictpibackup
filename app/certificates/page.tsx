@@ -18,21 +18,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 
-// Assets
-import logo from "../../assets/ICTPL_image.png";
-
-// Supabase (still used for user data only)
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-import TEMP_LOGO from "@/public/images/ICTPL_image.jpg"
-// Fallback names
-import namesData from "../../public/names.json";
-
-// Unified temporary logo
+import { supabase } from "@/lib/Supabase";
 
 export default function Certificates() {
   const auth = useAuth() as any;
@@ -69,13 +55,7 @@ export default function Certificates() {
         if (resolvedName) {
           setFullName(resolvedName);
         } else {
-          const emailToNameMap = new Map<string, string>(
-            Object.entries(namesData as Record<string, string>)
-          );
-          const fallbackName =
-            emailToNameMap.get(userEmail) ||
-            userEmail.split("@")[0]?.replace(/[._]/g, " ") ||
-            "User";
+          const fallbackName = userEmail.split("@")[0]?.replace(/[._]/g, " ") || "User";
           setFullName(fallbackName);
         }
       } catch (err: any) {
@@ -120,25 +100,28 @@ export default function Certificates() {
   const showTwoLines = nameParts.length > 1;
   const userEmail = auth.user?.email?.toLowerCase() || "—";
 
-  // Temporary static certificates (no real URLs yet)
+  // Temporary static certificates – using public/ paths
   const tempCertificates = [
     {
       label: "Skill India Marksheet",
       status: "Preparing",
       accent: "from-orange-50 to-amber-100",
       note: "Will be available after result processing",
+      image: "/images/skill-india.jpg",
     },
     {
       label: "NCVET Qualification Certificate",
       status: "Preparing",
       accent: "from-blue-50 to-indigo-100",
       note: "Awaiting official issuance",
+      image: "/images/nvcet.jpg",
     },
     {
       label: "CTPr (ICTPI) Membership Certificate",
       status: "Active Member",
       accent: "from-blue-50 to-blue-200",
       note: "Available soon – contact support if urgent",
+      image: "/images/ICTPL_image.png",
     },
   ];
 
@@ -158,7 +141,13 @@ export default function Certificates() {
         {/* Desktop Sidebar */}
         <aside className="hidden md:sticky md:top-0 md:flex md:flex-col md:w-64 md:h-screen md:bg-[#0062cc] md:text-white md:overflow-y-auto scrollbar-hide">
           <div className="p-6 border-b border-blue-600">
-            <Image src={logo} alt="ICTPL Logo" width={140} height={56} priority />
+            <Image
+              src="/images/ICTPL_image.jpg" // ← changed to public path (or keep your alias if working)
+              alt="ICTPL Logo"
+              width={140}
+              height={56}
+              priority
+            />
           </div>
           <nav className="flex-1 px-3 py-6 space-y-1.5">
             <Link href="/dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-blue-600/80 transition">
@@ -185,7 +174,10 @@ export default function Certificates() {
             <Link href="/tests" className="flex items-center px-4 py-3 rounded-lg hover:bg-blue-600/80 transition">
               <ClipboardPenLine className="w-5 h-5 mr-3" /> Practice Tests
             </Link>
-            <Link href="/certificates" className="flex items-center px-4 py-3 rounded-lg bg-blue-700 font-medium">
+            <Link
+              href="/certificates"
+              className="flex items-center px-4 py-3 rounded-lg bg-blue-700 font-medium"
+            >
               <FileCheck className="w-5 h-5 mr-3" /> Certificates
             </Link>
           </nav>
@@ -229,7 +221,14 @@ export default function Certificates() {
           <header className="bg-white shadow-sm px-4 sm:px-6 py-4 sticky top-0 z-40">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 max-w-7xl mx-auto">
               <div className="flex items-center gap-4">
-                <Image src={logo} alt="ICTPL Logo" className="h-14 w-auto sm:h-16" priority />
+                <Image
+                  src="/images/ICTPL_image.jpg" // ← using public path
+                  alt="ICTPL Logo"
+                  className="h-14 w-auto sm:h-16"
+                  width={160}
+                  height={64}
+                  priority
+                />
               </div>
 
               <div className="flex items-center gap-4 sm:gap-6">
@@ -294,8 +293,8 @@ export default function Certificates() {
                   >
                     <div className={`h-48 bg-gradient-to-br ${cert.accent} flex items-center justify-center p-8`}>
                       <Image
-                        src={TEMP_LOGO}
-                        alt="ICTPI Logo"
+                        src={cert.image}
+                        alt={`${cert.label} preview`}
                         width={140}
                         height={140}
                         className="object-contain drop-shadow-md opacity-90"

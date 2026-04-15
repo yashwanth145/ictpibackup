@@ -1,6 +1,15 @@
 // app/page.tsx
-import Image from 'next/image';
+import Image, { type StaticImageData } from 'next/image';
 import Link from 'next/link';
+import udpinImage from '../assets/udpin.jpeg';
+
+type RecognitionLink = {
+  label: string;
+  href: string;
+  icon?: string;
+  imageSrc?: string | StaticImageData;
+  imageAlt?: string;
+};
 
 export default function Home() {
   const navItems = [
@@ -10,7 +19,7 @@ export default function Home() {
     { label: 'Refer', href: '/refer' },
   ];
 
-  const recognitionLinks = [
+  const recognitionLinks: RecognitionLink[] = [
     {
       label: 'National Qualification Register',
       href: 'https://www.nqr.gov.in/qualifications/3521',
@@ -29,7 +38,8 @@ export default function Home() {
     {
       label: 'ICTPI UDIN',
       href: 'https://ictpi.verifyudin.in/',
-      icon: '✅',
+      imageSrc: udpinImage,
+      imageAlt: 'ICTPI UDIN',
     },
     {
       label: 'Register of Members',
@@ -85,19 +95,37 @@ export default function Home() {
           </h3>
           <div className="flex flex-wrap justify-center gap-4 md:gap-6">
             {recognitionLinks.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center gap-3 px-6 py-3 bg-white/10 backdrop-blur-sm rounded-xl border border-amber-400/30 hover:border-amber-400 hover:bg-white/20 transition-all duration-300 hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-indigo-950"
-                aria-label={`Visit ${item.label}`}
-              >
-                <span className="text-2xl">{item.icon}</span>
-                <span className="font-medium text-sm sm:text-base text-amber-100 group-hover:text-amber-300 transition-colors">
-                  {item.label}
-                </span>
-              </a>
+              item.imageSrc ? (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative h-16 w-44 overflow-hidden rounded-xl border border-amber-400/40 transition-all duration-300 hover:border-amber-300 hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-indigo-950"
+                  aria-label={`Visit ${item.label}`}
+                >
+                  <Image
+                    src={item.imageSrc}
+                    alt={item.imageAlt ?? item.label}
+                    fill
+                    className="object-contain"
+                  />
+                </a>
+              ) : (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-3 px-6 py-3 bg-white/10 backdrop-blur-sm rounded-xl border border-amber-400/30 hover:border-amber-400 hover:bg-white/20 transition-all duration-300 hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-indigo-950"
+                  aria-label={`Visit ${item.label}`}
+                >
+                  <span className="text-2xl">{item.icon}</span>
+                  <span className="font-medium text-sm sm:text-base text-amber-100 group-hover:text-amber-300 transition-colors">
+                    {item.label}
+                  </span>
+                </a>
+              )
             ))}
           </div>
         </div>
