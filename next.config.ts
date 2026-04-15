@@ -1,8 +1,21 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-    images: {
-    domains: ["www.skillindiadigital.gov.in","ncvet.gov.in","www.ictpi.org"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "www.skillindiadigital.gov.in",
+      },
+      {
+        protocol: "https",
+        hostname: "ncvet.gov.in",
+      },
+      {
+        protocol: "https",
+        hostname: "www.ictpi.org",
+      },
+    ],
   },
 };
 
