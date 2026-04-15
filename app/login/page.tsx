@@ -8,7 +8,7 @@ import {
 } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import logo from "@/assets/ICTPL_image.png"; // adjust path if needed
+import logo from "@/assets/ICTPL_image.jpg";
 import { supabase } from "@/lib/Supabase";
 
 export default function LoginPage() {

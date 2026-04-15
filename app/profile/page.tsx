@@ -25,7 +25,7 @@ import {
   Camera,
 } from "lucide-react";
 import Image from "next/image";
-import logo from "../../assets/ICTPL_image.png";
+import logo from "../../assets/ICTPL_image.jpg";
 import { supabase } from "@/lib/Supabase";
 
 interface CandidateProfile {

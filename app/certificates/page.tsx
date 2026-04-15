@@ -121,7 +121,7 @@ export default function Certificates() {
       status: "Active Member",
       accent: "from-blue-50 to-blue-200",
       note: "Available soon – contact support if urgent",
-      image: "/images/ICTPL_image.png",
+      image: "/images/ICTPL_image.jpg",
     },
   ];
 

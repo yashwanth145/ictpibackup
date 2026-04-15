@@ -16,7 +16,7 @@ import {
   FileCheck,
 } from "lucide-react";
 import Image from "next/image";
-import logo from "../../assets/ICTPL_image.png";
+import logo from "../../assets/ICTPL_image.jpg";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(

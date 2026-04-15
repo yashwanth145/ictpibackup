@@ -10,7 +10,7 @@ import {
   ClipboardPenLine, User2, LogOut, Eye, X, Radio, Circle, AlertTriangle,
   FileCheck,
 } from "lucide-react";
-import logo from "../../assets/ICTPL_image.png";
+import logo from "../../assets/ICTPL_image.jpg";
 import { createClient } from "@supabase/supabase-js";
 import { format } from "date-fns";
 

@@ -24,7 +24,7 @@ import accountancy from "../../assets/Accountancy.webp";
 import complaince from "../../assets/complaiance.webp";
 import directax from "../../assets/directtax.webp";
 import appliedfinance from "../../assets/fourthimage.webp";
-import logo from "../../assets/ICTPL_image.png";
+import logo from "../../assets/ICTPL_image.jpg";
 
 // Date utilities
 import { format, addMinutes, isWithinInterval } from "date-fns";

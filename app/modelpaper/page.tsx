@@ -10,7 +10,7 @@ import {
   ClipboardPenLine, User2, LogOut, Eye, Download, X, Radio, Circle,
   FileCheck
 } from "lucide-react";
-import logo from "../../assets/ICTPL_image.png";
+import logo from "../../assets/ICTPL_image.jpg";
 import { createClient } from "@supabase/supabase-js";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";

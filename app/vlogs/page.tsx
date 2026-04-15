@@ -22,7 +22,7 @@ import {
   FileCheck,
   Upload,
 } from "lucide-react";
-import logo from "../../assets/ICTPL_image.png";
+import logo from "../../assets/ICTPL_image.jpg";
 import { supabase } from "@/lib/Supabase"; // assuming this is your supabase client
 
 // ── Types ─────────────────────────────────────────────────────────────────────
